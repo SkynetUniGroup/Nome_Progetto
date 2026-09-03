@@ -46,9 +46,13 @@ const CLAIM_LEASE_MS = 10 * 60 * 1000;
 
 // The queue consumer (PoC's TaskProcessor, fig. 7/8). One job per Task,
 // picked up independently — RF.48's "a failing job doesn't drag down the
-// others" is BullMQ's normal per-job isolation, as long as this class never
-// lets an error escape process() uncaught, which is why the agent
-// invocation is wrapped in try/catch below rather than left to propagate.
+// others" is BullMQ's normal per-job isolation, and it holds whether or not
+// an error escapes process(): a job that throws is marked failed and the
+// other jobs are untouched. Errors do escape here — claim() sits outside the
+// try, the outer block is try/finally with no catch, and finishFailed writes
+// to Mongo from inside the catch — and none of that costs RF.48 anything.
+// The try/catch around the agent invocation earns its place for a different
+// reason: it leaves the user a FAILED Report (see finishFailed).
 //
 // BE-17 adds the resume shape to this same Processor rather than a separate
 // one: a resume is still "run this Task's next step", it just starts from

@@ -182,7 +182,7 @@ describe('TaskProcessor — the window between announcing and releasing', () => 
     return { data } as never;
   }
 
-  it('loses the answer to a SPRINT_ID pause when the user replies before the claim is released', async () => {
+  it('starts the agent when the user answers a SPRINT_ID pause before the claim is released', async () => {
     // BE-17's first legitimate case: a Changelog Task with no sprintId
     // pauses without ever calling the agent, the frontend gets
     // task.inputRequired, the user answers, and POST /tasks/:id/input
@@ -223,7 +223,7 @@ describe('TaskProcessor — the window between announcing and releasing', () => 
     expect(task.pendingInput).toBeNull();
   });
 
-  it('loses the answer to an agent-reported INCOMPLETE_TASKS pause the same way', async () => {
+  it('resumes the agent when the user answers an agent-reported INCOMPLETE_TASKS pause the same way', async () => {
     // BE-17's second legitimate case: the agent itself pauses mid-run and
     // POST /tasks/:id/input enqueues a resume-task job carrying inputValue.
     await build([makeStored({ sprintId: 'SPRINT-42' })]);

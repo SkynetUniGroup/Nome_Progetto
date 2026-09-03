@@ -19,8 +19,6 @@ import { sanitizeMarkdown } from './markdown-sanitizer';
 // it, the other because the scanner's idea of "the destination" is greedier
 // than any real parser's, so the parser finds a second link inside a region
 // the scanner waved through whole.
-//
-// The expected values are the requirement, so these currently fail.
 
 /**
  * The href a CommonMark parser derives, expressed as the assertion the

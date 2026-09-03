@@ -31,10 +31,6 @@ function isAutolink(candidate: string): boolean {
 // with `!` or `?`. BE-18 asks for raw HTML *blocks* to be removed, and these
 // are exactly that — they were surviving only because the regex above was
 // written with tags in mind.
-//
-// Order matters. CDATA is checked before the declaration form, since both
-// open with `<!` and only CDATA ends at `]]>`; comments before declarations
-// for the same reason.
 const HTML_CDATA = /<!\[CDATA\[[\s\S]*?\]\]>/g;
 const HTML_COMMENT = /<!--[\s\S]*?-->/g;
 const HTML_PROCESSING_INSTRUCTION = /<\?[\s\S]*?\?>/g;
@@ -55,6 +51,12 @@ const UNCLOSED_COMMENT = /<!--/g;
 // autolink exactly as it applies to `[x](dest)` — see rejectUnsafeLinks,
 // which is the only place either form is allowed through.
 function stripRawHtml(markdown: string): string {
+  // The one ordering constraint in the chain below: HTML_COMMENT has to run
+  // before UNCLOSED_COMMENT reaches the same text. Reversed, `<!--` is
+  // deleted as a bare opener and the comment's body and its `-->` are left
+  // behind as visible text. The other four are independent of each other —
+  // HTML_DECLARATION in particular needs a letter after `<!`, so it matches
+  // neither CDATA nor a comment.
   return markdown
     .replace(HTML_CDATA, '')
     .replace(HTML_COMMENT, '')
@@ -125,10 +127,14 @@ export function sanitizeMarkdown(markdown: string): string {
   // link that nothing ever judged, with its scheme in the clear.
   //
   // The property this file owes its callers is about the string it returns,
-  // not the string it was given, so the check belongs on the output. Every
-  // pass that changes anything strictly shortens the text — destinations and
-  // autolinks are only ever dropped, never added — so this settles, and one
-  // extra pass over already-clean text is the normal cost.
+  // not the string it was given, so the check belongs on the output. This
+  // settles, but not by getting shorter — a label whose brackets don't
+  // balance, `[lbl` above among them, has each stray `[` escaped to `\[`,
+  // one character longer than it was. What cannot go back up is the
+  // number of brackets still open to escaping: unmatchedOpenBrackets skips
+  // the character after a `\`, so one this pass escaped is invisible to the
+  // next, and every other change a pass makes is a deletion. One extra pass
+  // over already-clean text is the normal cost.
   let text = stripRawHtml(markdown);
   for (let pass = 0; pass < MAX_SCAN_PASSES; pass += 1) {
     const scanned = rejectUnsafeAutolinks(rejectUnsafeLinks(text));
@@ -389,8 +395,6 @@ function readAutolink(
 interface ParsedLink {
   label: string;
   destination: string;
-  /** Index just past the `](`, where the destination begins. */
-  destinationStart: number;
   /** Index of the destination's closing parenthesis. */
   end: number;
 }
@@ -470,7 +474,6 @@ function readLink(markdown: string, open: number): ParsedLink | null {
         return {
           label: markdown.slice(open + 1, labelEnd),
           destination,
-          destinationStart: labelEnd + 2,
           end: cursor,
         };
       }
