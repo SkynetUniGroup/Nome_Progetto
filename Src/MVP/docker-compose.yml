@@ -10,6 +10,8 @@ services:
       # reach each other by service name, never by localhost.
       MONGODB_URI: mongodb://mongodb:27017/codeguardian
       REDIS_URL: redis://redis:6379
+      # BE-20: same reasoning — the container reaches MinIO by service name.
+      S3_ENDPOINT: http://minio:9000
       # File-change notifications from a Windows bind mount don't reliably
       # reach the Linux container, so the TypeScript watcher has to poll for
       # changes instead of waiting for them — without this, edits on the host
@@ -22,6 +24,7 @@ services:
     depends_on:
       - mongodb
       - redis
+      - minio
 
   mongodb:
     image: mongo:7
@@ -34,6 +37,24 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  # S3-compatible object storage for exported PDF artifacts (BE-20). The
+  # backend creates the bucket and its 30-day expiry lifecycle rule itself
+  # on startup (ReportArtifactStorageService.onModuleInit) — nothing to
+  # provision here beyond the server. Console at :9001 (default
+  # minioadmin/minioadmin, matching .env.example) is only for poking around
+  # manually; the app never uses it.
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
 
   # Python agents service (FastAPI/Uvicorn on :8000, per agents/Dockerfile).
   # Not exposed to the host — only reachable from other containers, at
@@ -55,3 +76,4 @@ services:
 
 volumes:
   mongo_data:
+  minio_data:

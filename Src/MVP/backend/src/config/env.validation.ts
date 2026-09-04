@@ -27,4 +27,17 @@ export const envValidationSchema = Joi.object({
 
   // Base URL of the Python agent service (BE-15).
   AGENTS_SERVICE_URL: Joi.string().uri().default('http://agents:8000'),
+
+  // BE-20: object storage for exported PDF artifacts. S3_ENDPOINT is
+  // optional on purpose — set it to point at MinIO in dev/docker-compose;
+  // omit it against real AWS S3, where the SDK resolves the regional
+  // endpoint itself from S3_REGION. S3_FORCE_PATH_STYLE must be true for
+  // MinIO (it doesn't support virtual-hosted-style addressing the way real
+  // S3 does).
+  REPORTS_BUCKET_NAME: Joi.string().default('code-guardian-reports'),
+  S3_REGION: Joi.string().default('us-east-1'),
+  S3_ENDPOINT: Joi.string().uri().optional(),
+  S3_FORCE_PATH_STYLE: Joi.boolean().default(false),
+  S3_ACCESS_KEY_ID: Joi.string().required(),
+  S3_SECRET_ACCESS_KEY: Joi.string().required(),
 });

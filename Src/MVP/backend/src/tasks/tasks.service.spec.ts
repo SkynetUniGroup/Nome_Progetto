@@ -21,23 +21,31 @@ describe('TasksService', () => {
     findOne: jest.Mock;
     find: jest.Mock;
     insertMany: jest.Mock;
+    updateOne: jest.Mock;
   };
   let contextModel: { findOne: jest.Mock };
   let credentials: { hasCredential: jest.Mock };
   let agentRegistry: { getForRole: jest.Mock };
   let events: { emitTaskUpdated: jest.Mock };
-  let queue: { addBulk: jest.Mock };
+  let queue: { addBulk: jest.Mock; add: jest.Mock };
   let usageLimit: { checkAndIncrement: jest.Mock };
 
   const developer = { userId: 'user1', role: 'DEVELOPER' as const };
 
   beforeEach(async () => {
-    taskModel = { findOne: jest.fn(), find: jest.fn(), insertMany: jest.fn() };
+    taskModel = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      insertMany: jest.fn(),
+      // Conditional writes match by default; the tests about losing a race
+      // against TaskProcessor override this.
+      updateOne: jest.fn().mockResolvedValue({ matchedCount: 1 }),
+    };
     contextModel = { findOne: jest.fn() };
     credentials = { hasCredential: jest.fn() };
     agentRegistry = { getForRole: jest.fn() };
     events = { emitTaskUpdated: jest.fn() };
-    queue = { addBulk: jest.fn() };
+    queue = { addBulk: jest.fn(), add: jest.fn() };
     // Passes by default — only the dedicated usage-limit tests below need
     // it to reject, everything else is testing the other three checks.
     usageLimit = { checkAndIncrement: jest.fn().mockResolvedValue(undefined) };
@@ -228,7 +236,7 @@ describe('TasksService', () => {
       );
     });
 
-    it('transitions to CANCELLED and emits task.updated', async () => {
+    it('transitions to CANCELLED with a conditional write and emits task.updated', async () => {
       const task = {
         status: 'PENDING',
         canTransitionTo: jest.fn().mockReturnValue(true),
@@ -238,8 +246,146 @@ describe('TasksService', () => {
 
       await service.cancel('user1', 'task1');
 
-      expect(task.status).toBe('CANCELLED');
+      // The status filter is the point: a document fetched moments earlier
+      // can't decide the race against a TaskProcessor invocation finishing
+      // in between, so the transition is expressed as a filter the database
+      // evaluates at write time.
+      expect(taskModel.updateOne).toHaveBeenCalledWith(
+        {
+          _id: 'task1',
+          userId: 'user1',
+          status: { $in: ['PENDING', 'RUNNING'] },
+        },
+        { $set: { status: 'CANCELLED' } },
+      );
+      expect(task.save).not.toHaveBeenCalled();
+      expect(events.emitTaskUpdated).toHaveBeenCalledWith(
+        'user1',
+        'task1',
+        'CANCELLED',
+      );
+    });
+
+    it('rejects with 409, and announces nothing, when the Task reached a terminal state before the write landed', async () => {
+      // The Task was RUNNING when read, and TaskProcessor completed it
+      // before this write got there. Cancelling it now would resurrect a
+      // terminal Task, so the write matches nothing and the caller is told.
+      taskModel.findOne.mockResolvedValue({
+        status: 'RUNNING',
+        canTransitionTo: jest.fn().mockReturnValue(true),
+        save: jest.fn(),
+      });
+      taskModel.updateOne.mockResolvedValue({ matchedCount: 0 });
+
+      await expect(service.cancel('user1', 'task1')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(events.emitTaskUpdated).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('submitInput', () => {
+    function makeTask(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'task1',
+        status: 'RUNNING',
+        pendingInput: null,
+        sprintId: undefined,
+        canTransitionTo: jest.fn().mockReturnValue(true),
+        save: jest.fn().mockResolvedValue(undefined),
+        ...overrides,
+      };
+    }
+
+    it('throws NotFoundException when the task does not belong to the caller', async () => {
+      taskModel.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.submitInput('user1', 'task1', { kind: 'SPRINT_ID' } as never),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects with 409 when the task has no pending input', async () => {
+      taskModel.findOne.mockResolvedValue(makeTask({ pendingInput: null }));
+
+      await expect(
+        service.submitInput('user1', 'task1', { kind: 'SPRINT_ID' } as never),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects with 409 when the submitted kind does not match what the task is waiting for', async () => {
+      taskModel.findOne.mockResolvedValue(
+        makeTask({ pendingInput: { kind: 'BUSINESS_CONFIRMATION' } }),
+      );
+
+      await expect(
+        service.submitInput('user1', 'task1', {
+          kind: 'SPRINT_ID',
+          sprintId: 'S-1',
+        } as never),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('SPRINT_ID: sets sprintId, clears pendingInput and enqueues a run-task job', async () => {
+      const task = makeTask({ pendingInput: { kind: 'SPRINT_ID' } });
+      taskModel.findOne.mockResolvedValue(task);
+
+      await service.submitInput('user1', 'task1', {
+        kind: 'SPRINT_ID',
+        sprintId: 'S-42',
+      } as never);
+
+      expect(task.sprintId).toBe('S-42');
+      expect(task.pendingInput).toBeNull();
       expect(task.save).toHaveBeenCalled();
+      expect(queue.add).toHaveBeenCalledWith('run-task', { taskId: 'task1' });
+    });
+
+    it('INCOMPLETE_TASKS + PROCEED: clears pendingInput and enqueues a resume-task job', async () => {
+      const task = makeTask({
+        pendingInput: { kind: 'INCOMPLETE_TASKS', taskIds: ['T-1'] },
+      });
+      taskModel.findOne.mockResolvedValue(task);
+
+      await service.submitInput('user1', 'task1', {
+        kind: 'INCOMPLETE_TASKS',
+        action: 'PROCEED',
+      } as never);
+
+      expect(task.pendingInput).toBeNull();
+      expect(queue.add).toHaveBeenCalledWith('resume-task', {
+        taskId: 'task1',
+        inputValue: { action: 'PROCEED' },
+      });
+      expect(events.emitTaskUpdated).not.toHaveBeenCalled();
+    });
+
+    it('BUSINESS_CONFIRMATION + CANCEL: cancels the task instead of resuming the agent', async () => {
+      const task = makeTask({
+        pendingInput: {
+          kind: 'BUSINESS_CONFIRMATION',
+          technicalReportId: 'r1',
+        },
+      });
+      taskModel.findOne.mockResolvedValue(task);
+
+      await service.submitInput('user1', 'task1', {
+        kind: 'BUSINESS_CONFIRMATION',
+        action: 'CANCEL',
+      } as never);
+
+      // Same conditional write POST /tasks/:id/cancel uses — it is the same
+      // transition — plus clearing the pendingInput this answer resolves.
+      expect(taskModel.updateOne).toHaveBeenCalledWith(
+        {
+          _id: 'task1',
+          userId: 'user1',
+          status: { $in: ['PENDING', 'RUNNING'] },
+        },
+        { $set: { status: 'CANCELLED', pendingInput: null } },
+      );
+      expect(task.save).not.toHaveBeenCalled();
+      expect(queue.add).not.toHaveBeenCalled();
       expect(events.emitTaskUpdated).toHaveBeenCalledWith(
         'user1',
         'task1',

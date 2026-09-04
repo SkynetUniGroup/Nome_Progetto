@@ -61,6 +61,13 @@ export class Report {
 
   @Prop({ type: MongooseSchema.Types.Mixed })
   error?: ReportError;
+
+  // Injected by the `timestamps: { createdAt: 'generatedAt' }` option above
+  // at the schema level, not by a @Prop() — declaring it again here would
+  // register the same path twice. This plain field exists only so
+  // TypeScript (ReportDocument = HydratedDocument<Report>) knows it's
+  // there; BE-19 is the first code that actually reads it.
+  generatedAt: Date;
 }
 
 export const ReportSchema = SchemaFactory.createForClass(Report);

@@ -13,6 +13,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../common/authenticated-user';
 import { TasksService, CreateTaskBatchResult } from './tasks.service';
 import { CreateTaskBatchDto } from './dto/create-task-batch.dto';
+import { SubmitInputDto } from './dto/submit-input.dto';
 import { TaskDto } from './dto/task.dto';
 
 @Controller('tasks')
@@ -52,5 +53,19 @@ export class TasksController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.tasksService.cancel(userId, id);
+  }
+
+  // BE-17: the counterpart to whatever pendingInput TaskProcessor last set —
+  // one endpoint for all three kinds, since the frontend already models
+  // them as a single discriminated union (PendingInput/SubmitInputDto),
+  // rather than three near-duplicate routes.
+  @Post(':id/input')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  submitInput(
+    @CurrentUser('userId') userId: string,
+    @Param('id') id: string,
+    @Body() dto: SubmitInputDto,
+  ): Promise<void> {
+    return this.tasksService.submitInput(userId, id, dto);
   }
 }

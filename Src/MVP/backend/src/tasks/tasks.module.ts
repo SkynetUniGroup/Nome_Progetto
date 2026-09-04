@@ -13,6 +13,7 @@ import {
 import { CredentialsModule } from '../credentials/credentials.module';
 import { OperationsModule } from '../operations/operations.module';
 import { EventsModule } from '../events/events.module';
+import { ReportsModule } from '../reports/reports.module';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { TaskProcessor } from './task-processor';
@@ -36,6 +37,9 @@ import { UsageLimitService } from './usage-limit.service';
     CredentialsModule,
     OperationsModule,
     EventsModule,
+    // BE-18: TaskProcessor assembles and persists a Report via
+    // ReportAssemblyService once a Task reaches COMPLETED or FAILED.
+    ReportsModule,
   ],
   controllers: [TasksController],
   providers: [
