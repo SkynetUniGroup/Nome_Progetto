@@ -9,7 +9,6 @@ from typing import Any, List, Optional, Tuple
 from langgraph.types import interrupt
 
 from ..github_toolset import GitHubToolset
-from ..graph import AgentCancelled
 from ..models import Block, ChangelogItemBlock, Proposal, TextBlock
 from ..config import settings
 from ._base import load_prompt_template, render_prompt
@@ -93,8 +92,14 @@ class ChangelogLoader:
             })
             
             if action == 'CANCEL':
-                # NOTE: According to MVP specs, NestJS handles user cancellation 
-                # by terminating the task without resuming the graph. This branch is defensive 
+                # Imported here and not at module level: graph.py imports
+                # ReadabilityTooLowError from this module, so a top-level import
+                # of graph closes an import cycle that makes both modules
+                # unimportable, whichever one is loaded first.
+                from ..graph import AgentCancelled
+
+                # NOTE: According to MVP specs, NestJS handles user cancellation
+                # by terminating the task without resuming the graph. This branch is defensive
                 # and guarantees graceful abortion during tests, debug, or manual API usage.
                 raise AgentCancelled(stage='INCOMPLETE_TASKS')
 
