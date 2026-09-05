@@ -40,7 +40,7 @@ function riepilogo(over: Partial<Record<string, unknown>> & { id: string }) {
 
 /** Monta la pagina attendendo la fine del caricamento. */
 async function renderConReport(reports: unknown[]) {
-  getMock.mockResolvedValueOnce({ data: { reports } });
+  getMock.mockResolvedValueOnce({ data: reports });
   render(<ReportsPage />);
   await screen.findByRole('heading', { name: 'Storico Report' });
 }

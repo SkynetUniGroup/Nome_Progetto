@@ -289,19 +289,17 @@ describe('useWebSocket', () => {
     // Arrange: lo store ha uno stato ormai vecchio, il server ne ha uno nuovo.
     seedTask();
     apiGetMock.mockResolvedValueOnce({
-      data: {
-        tasks: [
-          {
-            id: 'task-1',
-            operation: 'SECURITY_OWASP',
-            status: 'COMPLETED',
-            progressPercent: 100,
-            currentStage: 'fine',
-            reportId: 'report-1',
-            error: null,
-          },
-        ],
-      },
+      data: [
+        {
+          id: 'task-1',
+          operation: 'SECURITY_OWASP',
+          status: 'COMPLETED',
+          progressPercent: 100,
+          currentStage: 'fine',
+          reportId: 'report-1',
+          error: null,
+        },
+      ],
     });
     await renderConnected();
 

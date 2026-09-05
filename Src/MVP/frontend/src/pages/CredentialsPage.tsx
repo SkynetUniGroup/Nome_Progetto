@@ -4,83 +4,64 @@ import { apiClient } from '../api/client';
 import { ValidatedField } from '../components/shared/ValidatedField';
 import { Spinner } from '../components/shared/Spinner';
 import { StatusBadge } from '../components/shared/StatusBadge';
-import type { ServiceCredentialDto } from '../types';
+import type { CreateCredentialDto, ServiceCredentialDto } from '../types';
 
 /**
  * CredentialsPage — /credentials
  *
- * Allows the user to save or update their service credentials:
- *  - GitHub Personal Access Token (PAT)
- *  - OpenAI API Key
+ * Lets the user store the GitHub Personal Access Token the platform uses on
+ * their behalf.
  *
- * On load, fetches the current credentials list from GET /credentials
- * (returns ServiceCredentialDto[]) and derives the overall status shown
- * in sessionStore.
+ * The backend verifies the token against GitHub *before* persisting it, so
+ * saving and validating are one step: a stored credential is by construction
+ * one that worked. There is no separate "is it still valid?" flag to read —
+ * only `connectedAt`, the moment it last checked out. The re-verify action
+ * re-runs that check on demand.
  *
- * On form submit, calls POST /credentials followed by POST /credentials/validate
- * to verify them against the external services before persisting.
- *
- * The actual secret values are NEVER stored on the frontend; only the status
- * ('connected' | 'invalid' | 'missing') is tracked in the sessionStore.
+ * The token itself is never held here after submission: only the record the
+ * backend returns, which contains no secret.
  */
 export function CredentialsPage() {
   const set_status = useSessionStore((s) => s.setCredentialsStatus);
   const credentials_status = useSessionStore((s) => s.credentialsStatus);
 
-  // Form state (secrets shown only while editing; never persisted locally)
   const [github_pat, setGithubPat] = useState('');
-  const [openai_key, setOpenaiKey] = useState('');
-  const [errors, setErrors] = useState<{ github_pat?: string; openai_key?: string; global?: string }>({});
-  const [loading, setLoading] = useState(false);
-  const [validating, setValidating] = useState(false);
+  const [errors, setErrors] = useState<{ github_pat?: string; global?: string }>({});
+  const [saving, setSaving] = useState(false);
+  const [revalidating, setRevalidating] = useState(false);
   const [fetch_loading, setFetchLoading] = useState(true);
 
-  /**
-   * Stores the GitHub credential record returned by the backend, used to
-   * show lastValidatedAt and provider status information.
-   */
-  const [github_credential, setGithubCredential] = useState<ServiceCredentialDto | null>(null);
+  /** The stored GitHub credential, or null when none is configured. */
+  const [credential, setCredential] = useState<ServiceCredentialDto | null>(null);
 
-  // On mount: fetch current credentials list from GET /credentials.
-  useEffect(() => {
-    async function fetch_status() {
-      try {
-        const response = await apiClient.get<ServiceCredentialDto[]>('/credentials');
-        const credentials = response.data;
-
-        // Find the GitHub credential from the list.
-        const github = credentials.find((c) => c.provider === 'GITHUB') ?? null;
-        setGithubCredential(github);
-
-        if (!github) {
-          set_status('missing');
-        } else if (github.status === 'CONNECTED') {
-          set_status('connected');
-        } else {
-          set_status('invalid');
-        }
-      } catch {
-        // If the request fails, assume credentials are missing.
-        set_status('missing');
-      } finally {
-        setFetchLoading(false);
-      }
+  /** Reads the stored credentials and derives the session-wide status. */
+  async function load_credentials(): Promise<void> {
+    try {
+      const { data } = await apiClient.get<ServiceCredentialDto[]>('/credentials');
+      const github = data.find((c) => c.provider === 'GITHUB') ?? null;
+      setCredential(github);
+      set_status(github ? 'connected' : 'missing');
+    } catch {
+      // A failed read is indistinguishable from "nothing stored yet" as far
+      // as what the user can do next: configure a token.
+      set_status('missing');
     }
-    fetch_status();
-  }, [set_status]);
+  }
 
-  /** Client-side validation before the API call. */
+  useEffect(() => {
+    void load_credentials().finally(() => setFetchLoading(false));
+    // Runs once on mount: set_status comes from a Zustand store and is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Client-side check before spending a network round-trip. */
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!github_pat.trim()) {
+    const trimmed = github_pat.trim();
+    if (!trimmed) {
       next.github_pat = 'Inserisci il GitHub PAT';
-    } else if (!github_pat.trim().startsWith('ghp_') && !github_pat.trim().startsWith('github_pat_')) {
+    } else if (!trimmed.startsWith('ghp_') && !trimmed.startsWith('github_pat_')) {
       next.github_pat = 'Il PAT GitHub deve iniziare con ghp_ oppure github_pat_';
-    }
-    if (!openai_key.trim()) {
-      next.openai_key = 'Inserisci la chiave API OpenAI';
-    } else if (!openai_key.trim().startsWith('sk-')) {
-      next.openai_key = 'La chiave OpenAI deve iniziare con sk-';
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -90,48 +71,52 @@ export function CredentialsPage() {
     e.preventDefault();
     if (!validate()) return;
 
-    setLoading(true);
+    setSaving(true);
     setErrors({});
 
+    const dto: CreateCredentialDto = { provider: 'GITHUB', token: github_pat.trim() };
+
     try {
-      // 1. Save the credentials.
-      await apiClient.post('/credentials', {
-        githubPat: github_pat.trim(),
-        openaiApiKey: openai_key.trim(),
-      });
-
-      // 2. Validate them against the external services.
-      setValidating(true);
-      const validation = await apiClient.post<{ valid: boolean; message?: string }>(
-        '/credentials/validate',
-      );
-
-      if (validation.data.valid) {
-        set_status('connected');
-        // Clear the fields after successful save (the secrets are no longer needed).
-        setGithubPat('');
-        setOpenaiKey('');
-        // Re-fetch to update the displayed lastValidatedAt timestamp.
-        const refreshed = await apiClient.get<ServiceCredentialDto[]>('/credentials');
-        const github = refreshed.data.find((c) => c.provider === 'GITHUB') ?? null;
-        setGithubCredential(github);
-      } else {
+      const { data } = await apiClient.post<ServiceCredentialDto>('/credentials', dto);
+      setCredential(data);
+      set_status('connected');
+      // Clear the field: the secret is stored server-side and must not stay
+      // in the page any longer than the request needed it.
+      setGithubPat('');
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 400) {
         set_status('invalid');
-        setErrors({ global: validation.data.message ?? 'Le credenziali non sono valide.' });
+        setErrors({ global: 'GitHub ha rifiutato il token. Controllalo e riprova.' });
+      } else {
+        setErrors({ global: 'Errore durante il salvataggio. Riprova più tardi.' });
       }
-    } catch {
-      setErrors({ global: 'Errore durante il salvataggio. Riprova più tardi.' });
     } finally {
-      setLoading(false);
-      setValidating(false);
+      setSaving(false);
     }
   }
 
-  /**
-   * Formats an ISO-8601 string as a localised date+time.
-   * Returns a dash when the value is null (credential never validated).
-   */
-  function format_date(iso: string | null): string {
+  /** Re-runs the GitHub check on the stored token. */
+  async function handle_revalidate() {
+    if (!credential) return;
+    setRevalidating(true);
+    setErrors({});
+    try {
+      const { data } = await apiClient.post<ServiceCredentialDto>(
+        `/credentials/${credential.id}/validate`,
+      );
+      setCredential(data);
+      set_status('connected');
+    } catch {
+      set_status('invalid');
+      setErrors({ global: 'Il token memorizzato non è più valido. Inseriscine uno nuovo.' });
+    } finally {
+      setRevalidating(false);
+    }
+  }
+
+  /** Formats an ISO-8601 instant for display, or a dash when absent. */
+  function format_date(iso: string | undefined): string {
     if (!iso) return '—';
     return new Date(iso).toLocaleString('it-IT', {
       dateStyle: 'short',
@@ -139,17 +124,14 @@ export function CredentialsPage() {
     });
   }
 
-  const is_saving = loading || validating;
-
   return (
     <div className="mx-auto max-w-lg">
       <h1 className="mb-1 text-lg font-semibold text-[#2a2a2a]">Credenziali</h1>
       <p className="mb-6 text-sm text-gray-400">
-        Le credenziali vengono cifrate e salvate in modo sicuro sul server. Non vengono mai
-        esposte nel browser dopo il salvataggio.
+        Il token viene verificato su GitHub e salvato cifrato sul server. Non viene mai esposto
+        nel browser dopo il salvataggio.
       </p>
 
-      {/* Current status indicator */}
       {!fetch_loading && (
         <div className="mb-6 rounded-lg border border-[#cccccc] bg-gray-50 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
@@ -169,30 +151,37 @@ export function CredentialsPage() {
               {credentials_status === 'unknown' && 'Verifica in corso…'}
             </span>
           </div>
-          {github_credential && (
-            <p className="text-xs text-gray-400">
-              Ultima validazione: {format_date(github_credential.lastValidatedAt)}
-            </p>
+          {credential && (
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-gray-400">
+                Ultima verifica: {format_date(credential.connectedAt)}
+              </p>
+              <button
+                type="button"
+                onClick={handle_revalidate}
+                disabled={revalidating}
+                className="text-xs text-[#2277cc] hover:underline disabled:opacity-50"
+              >
+                {revalidating ? 'Verifica in corso…' : 'Verifica di nuovo'}
+              </button>
+            </div>
           )}
         </div>
       )}
 
-      {/* Global error */}
       {errors.global && (
         <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-[#cc2222]">
           {errors.global}
         </div>
       )}
 
-      {/* Success banner */}
-      {credentials_status === 'connected' && !loading && (
+      {credentials_status === 'connected' && !saving && (
         <div className="mb-4 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-[#2a8a2a]">
-          Credenziali salvate e validate con successo. Puoi procedere a scegliere un repository.
+          Credenziali salvate e verificate. Puoi procedere a scegliere un repository.
         </div>
       )}
 
       <form onSubmit={handle_submit} noValidate className="flex flex-col gap-5">
-        {/* GitHub PAT */}
         <div>
           <ValidatedField
             label="GitHub Personal Access Token"
@@ -207,7 +196,8 @@ export function CredentialsPage() {
             error={errors.github_pat}
           />
           <p className="mt-1 text-xs text-gray-400">
-            Richiede permessi: repo, read:org, read:user. Genera un token su{' '}
+            Richiede i permessi di scrittura sul repository: il sistema crea branch e apre Pull
+            Request. Genera un token su{' '}
             <a
               href="https://github.com/settings/tokens"
               target="_blank"
@@ -219,40 +209,13 @@ export function CredentialsPage() {
           </p>
         </div>
 
-        {/* OpenAI API Key */}
-        <div>
-          <ValidatedField
-            label="OpenAI API Key"
-            type="password"
-            autoComplete="off"
-            placeholder="sk-xxxxxxxxxxxx"
-            value={openai_key}
-            onChange={(e) => {
-              setOpenaiKey(e.target.value);
-              setErrors((p) => ({ ...p, openai_key: undefined }));
-            }}
-            error={errors.openai_key}
-          />
-          <p className="mt-1 text-xs text-gray-400">
-            Reperibile su{' '}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#2277cc] hover:underline"
-            >
-              platform.openai.com/api-keys
-            </a>
-          </p>
-        </div>
-
         <button
           type="submit"
-          disabled={is_saving}
-          className="flex items-center justify-center gap-2 rounded bg-[#2a2a2a] px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-200 transition disabled:opacity-60"
+          disabled={saving}
+          className="flex items-center justify-center gap-2 rounded bg-[#2a2a2a] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#111] transition disabled:opacity-60"
         >
-          {is_saving && <Spinner size="sm" className="text-white" />}
-          {validating ? 'Verifica in corso…' : 'Salva e verifica'}
+          {saving && <Spinner size="sm" className="text-white" />}
+          {saving ? 'Verifica in corso…' : 'Salva e verifica'}
         </button>
       </form>
     </div>

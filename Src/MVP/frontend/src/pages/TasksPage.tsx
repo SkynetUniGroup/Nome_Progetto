@@ -46,8 +46,8 @@ export function TasksPage() {
   useEffect(() => {
     async function fetch_initial() {
       try {
-        const response = await apiClient.get<{ tasks: any[] }>('/tasks');
-        const mapped: TaskEntry[] = response.data.tasks.map((t: any) => ({
+        const response = await apiClient.get<any[]>('/tasks');
+        const mapped: TaskEntry[] = response.data.map((t: any) => ({
           id: t.id,
           operation: t.operation,
           status: t.status,

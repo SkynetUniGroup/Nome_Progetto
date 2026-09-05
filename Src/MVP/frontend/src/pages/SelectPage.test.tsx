@@ -54,7 +54,7 @@ beforeEach(() => {
   useSelectionStore.setState(initialSelection, true);
   navigateMock.mockReset();
   postMock.mockReset();
-  getMock.mockReset().mockResolvedValue({ data: { repositories: REPOS } });
+  getMock.mockReset().mockResolvedValue({ data: REPOS });
 });
 
 describe('SelectPage', () => {
@@ -100,9 +100,8 @@ describe('SelectPage', () => {
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith({ to: '/run' }));
     expect(postMock).toHaveBeenCalledWith('/contexts', {
-      repoOwner: 'OWASP',
-      repoName: 'NodeGoat',
-      ref: 'master',
+      repoUrl: 'https://github.com/OWASP/NodeGoat',
+      branch: 'master',
       scopeType: 'FULL_REPOSITORY',
     });
   });
@@ -129,7 +128,7 @@ describe('SelectPage', () => {
     await user.click(screen.getByRole('button', { name: BOTTONE }));
 
     await waitFor(() => expect(postMock).toHaveBeenCalled());
-    expect(postMock.mock.calls[0][1].ref).toBe('a1b2c3d4e5f6');
+    expect(postMock.mock.calls[0][1].branch).toBe('a1b2c3d4e5f6');
   });
 
   it('restringe l\'ambito a singoli file, uno per riga', async () => {

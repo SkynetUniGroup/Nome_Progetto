@@ -23,9 +23,9 @@ export function ReportsPage() {
   useEffect(() => {
     async function fetch_reports() {
       try {
-        const response = await apiClient.get<{ reports: ReportSummary[] }>('/reports');
+        const response = await apiClient.get<ReportSummary[]>('/reports');
         // Sort newest first.
-        const sorted = response.data.reports.sort(
+        const sorted = [...response.data].sort(
           (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime(),
         );
         setReports(sorted);

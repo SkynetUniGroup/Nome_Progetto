@@ -23,12 +23,24 @@ const { RegisterPage } = await import('./RegisterPage');
 
 const initialSession = useSessionStore.getState();
 
-const AUTH_OK = {
+/** POST /auth/register restituisce il profilo, senza token. */
+const PROFILO = {
   data: {
-    token: 'jwt-nuovo-utente',
-    user: { id: 'u9', firstName: 'Marco', role: 'DEVELOPER' },
+    id: 'u9',
+    firstName: 'Marco',
+    lastName: 'Rossi',
+    email: 'marco@azienda.it',
+    role: 'DEVELOPER',
   },
 };
+
+/** POST /auth/login, eseguito subito dopo, emette il token. */
+const AUTH_OK = { data: { accessToken: 'jwt-nuovo-utente' } };
+
+/** Registrazione seguita dal login: le due risposte, nell'ordine. */
+function registrazioneRiuscita() {
+  postMock.mockResolvedValueOnce(PROFILO).mockResolvedValueOnce(AUTH_OK);
+}
 
 function httpError(status: number) {
   return { response: { status } };
@@ -78,25 +90,31 @@ describe('RegisterPage', () => {
   });
 
   it('registra l\'utente, apre la sessione e lo porta alla configurazione delle credenziali', async () => {
-    postMock.mockResolvedValueOnce(AUTH_OK);
+    registrazioneRiuscita();
     render(<RegisterPage />);
     const user = await compilaModulo();
 
     await user.click(screen.getByRole('button', { name: 'Registrati' }));
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith({ to: '/credentials' }));
-    expect(postMock).toHaveBeenCalledWith('/auth/register', {
+    expect(postMock).toHaveBeenNthCalledWith(1, '/auth/register', {
       firstName: 'Marco',
       lastName: 'Rossi',
       email: 'marco@azienda.it',
       password: 'password-lunga',
       role: 'DEVELOPER',
     });
+    // La registrazione non emette un token: il login segue subito, cosi'
+    // l'utente non deve ridigitare le credenziali appena scritte.
+    expect(postMock).toHaveBeenNthCalledWith(2, '/auth/login', {
+      email: 'marco@azienda.it',
+      password: 'password-lunga',
+    });
     expect(useSessionStore.getState().token).toBe('jwt-nuovo-utente');
   });
 
   it('invia il ruolo operativo scelto dall\'utente', async () => {
-    postMock.mockResolvedValueOnce(AUTH_OK);
+    registrazioneRiuscita();
     render(<RegisterPage />);
     const user = await compilaModulo();
     await user.selectOptions(screen.getByLabelText('Ruolo'), 'SECURITY_AUDITOR');
@@ -108,7 +126,7 @@ describe('RegisterPage', () => {
   });
 
   it('ripulisce nome, cognome ed email dagli spazi in eccesso', async () => {
-    postMock.mockResolvedValueOnce(AUTH_OK);
+    registrazioneRiuscita();
     render(<RegisterPage />);
     const user = await compilaModulo({
       Nome: '  Marco  ',
@@ -221,7 +239,7 @@ describe('RegisterPage', () => {
     await user.click(bottone);
 
     await waitFor(() => expect(bottone).toBeDisabled());
-    sblocca(AUTH_OK);
+    sblocca(PROFILO);
     await waitFor(() => expect(bottone).not.toBeDisabled());
   });
 });

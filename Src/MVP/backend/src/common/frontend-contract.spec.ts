@@ -8,12 +8,12 @@ import { CreateContextDto } from '../contexts/dto/create-context.dto';
  * Every payload below is copied verbatim from the frontend source that sends
  * it — the file and line are named on each case. They run through the same
  * ValidationPipe configured in main.ts (whitelist + forbidNonWhitelisted),
- * so an unknown property is a 400, not a silently dropped field.
+ * so an unknown property is a 400, not a silently dropped field. Nothing is
+ * mocked: the DTOs and the pipe are the production ones.
  *
- * The mismatches are marked `test.failing`: they pass while the defect is
- * present and start failing the moment someone aligns the two sides, which
- * is the signal to delete the marker. Nothing here is a mock of a mock —
- * the DTOs and the pipe are the production ones.
+ * These caught a real break once — the frontend and backend had been built
+ * against different shapes and never run together — so they stay as the
+ * guard that keeps the two sides from drifting apart again.
  */
 describe('Frontend/backend request contract', () => {
   const pipe = new ValidationPipe({
@@ -43,28 +43,38 @@ describe('Frontend/backend request contract', () => {
   }
 
   describe('POST /credentials', () => {
-    // frontend/src/pages/CredentialsPage.tsx:98
+    // frontend/src/pages/CredentialsPage.tsx — handle_submit
     const bodyTheFrontendSends = {
-      githubPat: 'ghp_xxxxxxxxxxxx',
-      openaiApiKey: 'sk-xxxxxxxxxxxx',
+      provider: 'GITHUB',
+      token: 'ghp_1234567890abcdef',
     };
 
-    test.failing('accepts the body the frontend actually sends', async () => {
-      await expect(
-        validate(bodyTheFrontendSends, CreateCredentialDto),
-      ).resolves.toBeDefined();
+    it('accepts the body the frontend actually sends', async () => {
+      await expect(validate(bodyTheFrontendSends, CreateCredentialDto)).resolves.toEqual(
+        bodyTheFrontendSends,
+      );
     });
 
-    it('accepts the body its own DTO describes', async () => {
-      await expect(
-        validate({ provider: 'GITHUB', token: 'ghp_xxxxxxxxxxxx' }, CreateCredentialDto),
-      ).resolves.toEqual({ provider: 'GITHUB', token: 'ghp_xxxxxxxxxxxx' });
+    it('rejects a provider outside the supported list', async () => {
+      const reasons = await complaints(
+        { provider: 'GITLAB', token: 'glpat_x' },
+        CreateCredentialDto,
+      );
+
+      expect(reasons).toContain('provider');
     });
 
-    it('rejects the frontend body, naming the fields it does not know', async () => {
-      // Pins the current behaviour so the diagnosis stays readable: the two
-      // sides disagree on field names, not on validation strictness.
-      const reasons = await complaints(bodyTheFrontendSends, CreateCredentialDto);
+    it('rejects an empty token rather than storing a useless credential', async () => {
+      const reasons = await complaints({ provider: 'GITHUB', token: '' }, CreateCredentialDto);
+
+      expect(reasons).toContain('token');
+    });
+
+    it('rejects the shape the frontend used to send, so the old break cannot return', async () => {
+      const reasons = await complaints(
+        { githubPat: 'ghp_x', openaiApiKey: 'sk-x' },
+        CreateCredentialDto,
+      );
 
       expect(reasons).toContain('githubPat');
       expect(reasons).toContain('openaiApiKey');
@@ -72,35 +82,61 @@ describe('Frontend/backend request contract', () => {
   });
 
   describe('POST /contexts', () => {
-    // frontend/src/pages/SelectPage.tsx:92
+    // frontend/src/pages/SelectPage.tsx — handle_submit
     const bodyTheFrontendSends = {
-      repoOwner: 'OWASP',
-      repoName: 'NodeGoat',
-      ref: 'master',
+      repoUrl: 'https://github.com/OWASP/NodeGoat',
+      branch: 'master',
       scopeType: 'FULL_REPOSITORY',
     };
 
-    test.failing('accepts the body the frontend actually sends', async () => {
-      await expect(validate(bodyTheFrontendSends, CreateContextDto)).resolves.toBeDefined();
+    it('accepts the body the frontend actually sends', async () => {
+      await expect(validate(bodyTheFrontendSends, CreateContextDto)).resolves.toMatchObject(
+        bodyTheFrontendSends,
+      );
     });
 
-    it('accepts the body its own DTO describes', async () => {
+    it('accepts a restricted scope with its paths', async () => {
       await expect(
         validate(
           {
-            repoUrl: 'https://github.com/OWASP/NodeGoat',
-            branch: 'master',
-            scopeType: 'FULL_REPOSITORY',
+            ...bodyTheFrontendSends,
+            scopeType: 'FILES',
+            paths: ['app/routes/session.js'],
           },
           CreateContextDto,
         ),
       ).resolves.toBeDefined();
     });
 
-    it('rejects the frontend body: it carries no repository URL at all', async () => {
-      // The frontend splits the repository into owner and name; this DTO wants
-      // the whole URL and matches it against a regex.
-      const reasons = await complaints(bodyTheFrontendSends, CreateContextDto);
+    it('accepts an optional commit pinned inside the branch', async () => {
+      await expect(
+        validate({ ...bodyTheFrontendSends, commitSha: 'abc1234' }, CreateContextDto),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects a repository URL that is not a GitHub one', async () => {
+      const reasons = await complaints(
+        { ...bodyTheFrontendSends, repoUrl: 'https://gitlab.com/o/r' },
+        CreateContextDto,
+      );
+
+      expect(reasons).toContain('repoUrl');
+    });
+
+    it('rejects an unknown scope type', async () => {
+      const reasons = await complaints(
+        { ...bodyTheFrontendSends, scopeType: 'TUTTO_IL_MONDO' },
+        CreateContextDto,
+      );
+
+      expect(reasons).toContain('scopeType');
+    });
+
+    it('rejects the shape the frontend used to send, so the old break cannot return', async () => {
+      const reasons = await complaints(
+        { repoOwner: 'OWASP', repoName: 'NodeGoat', ref: 'master', scopeType: 'FULL_REPOSITORY' },
+        CreateContextDto,
+      );
 
       expect(reasons).toContain('repoUrl');
       expect(reasons).toContain('repoOwner');

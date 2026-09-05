@@ -43,8 +43,8 @@ export function SelectPage() {
   useEffect(() => {
     async function fetch_repos() {
       try {
-        const response = await apiClient.get<{ repositories: Repository[] }>('/repositories');
-        setRepos(response.data.repositories);
+        const response = await apiClient.get<Repository[]>('/repositories');
+        setRepos(response.data);
       } catch {
         setReposError(
           'Impossibile caricare i repository. Verifica che le credenziali GitHub siano valide.',
@@ -88,10 +88,11 @@ export function SelectPage() {
       .map((s) => s.trim())
       .filter(Boolean);
 
+    // The backend identifies the repository by its URL, not by owner/name,
+    // and validates it against a GitHub URL pattern.
     const dto: CreateContextDto = {
-      repoOwner: selected_repo.owner,
-      repoName: selected_repo.name,
-      ref: ref.trim(),
+      repoUrl: `https://github.com/${selected_repo.owner}/${selected_repo.name}`,
+      branch: ref.trim(),
       scopeType: scope_type,
       ...(paths_array.length > 0 ? { paths: paths_array } : {}),
     };

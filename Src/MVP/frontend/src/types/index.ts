@@ -32,31 +32,54 @@ export interface LoginDto {
   password: string;
 }
 
-/** Response from POST /auth/login and POST /auth/register */
-export interface AuthResponseDto {
+/**
+ * Response from POST /auth/login.
+ * The backend issues the token on its own; the profile is read separately
+ * from GET /auth/me.
+ */
+export interface AuthTokenDto {
+  accessToken: string;
+}
+
+/**
+ * Response from POST /auth/register and GET /auth/me.
+ * Registration does not issue a token — the caller logs in afterwards.
+ */
+export interface UserProfileDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+}
+
+/** DTO sent to POST /credentials. */
+export interface CreateCredentialDto {
+  provider: 'GITHUB';
   token: string;
-  user: AuthUser;
 }
 
 // ---------------------------------------------------------------------------
 // Credentials
 // ---------------------------------------------------------------------------
 
-/** Current state of the user's stored credentials (GitHub PAT + OpenAI key). */
+/** Current state of the user's stored credential for GitHub. */
 export type CredentialsStatus = 'unknown' | 'missing' | 'connected' | 'invalid';
 
 /**
  * A service credential record returned by GET /credentials.
  * Progettazione §20.4 – ServiceCredentialDto.
+ *
+ * There is no status field: the backend verifies the token against GitHub
+ * before persisting it, so a stored credential is by construction one that
+ * worked at `connectedAt`.
  */
 export interface ServiceCredentialDto {
   id: string;
   /** The external service this credential authenticates against. */
   provider: 'GITHUB';
-  /** Whether the stored token was last validated successfully. */
-  status: 'CONNECTED' | 'INVALID';
-  /** ISO-8601 timestamp of the last successful validation, or null if never validated. */
-  lastValidatedAt: string | null;
+  /** ISO-8601 timestamp of the last successful verification. */
+  connectedAt: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,10 +224,12 @@ export interface Repository {
  * Progettazione §20.4 – CreateContextDto.
  */
 export interface CreateContextDto {
-  repoOwner: string;
-  repoName: string;
-  /** The git ref (branch name, tag, or commit SHA) to analyse. */
-  ref: string;
+  /** Full GitHub URL of the repository; the backend validates its shape. */
+  repoUrl: string;
+  /** Branch or tag to analyse. */
+  branch: string;
+  /** Optional commit inside that branch, when the caller pins one. */
+  commitSha?: string;
   /**
    * How the analysis scope is defined:
    * - FULL_REPOSITORY: analyse the entire repository tree

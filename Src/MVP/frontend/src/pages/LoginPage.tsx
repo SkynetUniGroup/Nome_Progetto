@@ -4,7 +4,7 @@ import { useSessionStore } from '../stores/sessionStore';
 import { apiClient } from '../api/client';
 import { ValidatedField } from '../components/shared/ValidatedField';
 import { Spinner } from '../components/shared/Spinner';
-import type { LoginDto, AuthResponseDto } from '../types';
+import type { LoginDto, AuthTokenDto, UserProfileDto } from '../types';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -31,8 +31,14 @@ export function LoginPage() {
     setErrors({});
     const dto: LoginDto = { email: email.trim(), password };
     try {
-      const response = await apiClient.post<AuthResponseDto>('/auth/login', dto);
-      login(response.data.user, response.data.token);
+      const { data } = await apiClient.post<AuthTokenDto>('/auth/login', dto);
+      // The login response carries the token alone. The profile comes from
+      // /auth/me, called with the fresh token passed explicitly: the request
+      // interceptor reads the store, which has not been updated yet.
+      const profile = await apiClient.get<UserProfileDto>('/auth/me', {
+        headers: { Authorization: `Bearer ${data.accessToken}` },
+      });
+      login(profile.data, data.accessToken);
       navigate({ to: '/select' });
     } catch (err: any) {
       const status = err?.response?.status;

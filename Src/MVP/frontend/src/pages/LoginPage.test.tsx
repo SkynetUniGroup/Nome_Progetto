@@ -13,9 +13,11 @@ vi.mock('@tanstack/react-router', async () => {
 });
 
 const postMock = vi.fn();
+const getMock = vi.fn();
 vi.mock('../api/client', () => ({
   apiClient: {
     post: (...args: any[]) => postMock(...args),
+    get: (...args: any[]) => getMock(...args),
   },
 }));
 
@@ -23,11 +25,17 @@ const { LoginPage } = await import('./LoginPage');
 
 const initialSession = useSessionStore.getState();
 
-/** Risposta di /auth/login in caso di credenziali corrette. */
-const AUTH_OK = {
+/** Risposta di /auth/login: il backend emette il solo token. */
+const AUTH_OK = { data: { accessToken: 'jwt-valido' } };
+
+/** Profilo restituito da /auth/me, letto subito dopo il login. */
+const PROFILO = {
   data: {
-    token: 'jwt-valido',
-    user: { id: 'u1', firstName: 'Ada', role: 'DEVELOPER' },
+    id: 'u1',
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    email: 'ada@azienda.it',
+    role: 'DEVELOPER',
   },
 };
 
@@ -47,6 +55,7 @@ beforeEach(() => {
   useSessionStore.setState(initialSession, true);
   navigateMock.mockReset();
   postMock.mockReset();
+  getMock.mockReset().mockResolvedValue(PROFILO);
 });
 
 describe('LoginPage', () => {
@@ -72,7 +81,12 @@ describe('LoginPage', () => {
       password: 'password-giusta',
     });
     expect(useSessionStore.getState().token).toBe('jwt-valido');
-    expect(useSessionStore.getState().user).toEqual(AUTH_OK.data.user);
+    expect(useSessionStore.getState().user).toEqual(PROFILO.data);
+    // Il profilo arriva da /auth/me, chiamato col token appena ottenuto:
+    // l'interceptor legge lo store, che a quel punto non e' ancora aggiornato.
+    expect(getMock).toHaveBeenCalledWith('/auth/me', {
+      headers: { Authorization: 'Bearer jwt-valido' },
+    });
   });
 
   it('ripulisce l\'email dagli spazi prima di inviarla', async () => {

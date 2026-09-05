@@ -53,9 +53,9 @@ export function useWebSocket(): void {
      */
     async function resync_tasks(): Promise<void> {
       try {
-        const response = await apiClient.get<{ tasks: any[] }>('/tasks');
+        const response = await apiClient.get<any[]>('/tasks');
         // Map the raw backend DTO to the local TaskEntry shape.
-        const tasks = response.data.tasks.map((t: any) => ({
+        const tasks = response.data.map((t: any) => ({
           id: t.id,
           operation: t.operation,
           status: t.status,

@@ -50,7 +50,7 @@ function task(over: Partial<TaskEntry> & { id: string }): TaskEntry {
 
 /** Monta la pagina attendendo la fine del caricamento iniziale. */
 async function renderConTask(tasks: TaskEntry[]) {
-  getMock.mockResolvedValueOnce({ data: { tasks: [] } });
+  getMock.mockResolvedValueOnce({ data: [] });
   render(<TasksPage />);
   await screen.findByRole('heading', { name: 'Task' });
   // Le task arrivano dal WebSocket: le iniettiamo dopo il caricamento, come
@@ -69,7 +69,7 @@ beforeEach(() => {
 describe('TasksPage', () => {
   it('al montaggio recupera l\'elenco delle task dal server', async () => {
     getMock.mockResolvedValueOnce({
-      data: { tasks: [{ id: 't1', operation: 'DOCS_README', status: 'COMPLETED' }] },
+      data: [{ id: 't1', operation: 'DOCS_README', status: 'COMPLETED' }],
     });
 
     render(<TasksPage />);
@@ -80,7 +80,7 @@ describe('TasksPage', () => {
 
   it('applica valori di default ai campi che il server non valorizza', async () => {
     getMock.mockResolvedValueOnce({
-      data: { tasks: [{ id: 't1', operation: 'DOCS_README', status: 'RUNNING' }] },
+      data: [{ id: 't1', operation: 'DOCS_README', status: 'RUNNING' }],
     });
 
     render(<TasksPage />);

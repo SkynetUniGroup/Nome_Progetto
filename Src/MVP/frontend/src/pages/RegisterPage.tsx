@@ -4,7 +4,7 @@ import { useSessionStore } from '../stores/sessionStore';
 import { apiClient } from '../api/client';
 import { ValidatedField } from '../components/shared/ValidatedField';
 import { Spinner } from '../components/shared/Spinner';
-import type { RegisterDto, AuthResponseDto, UserRole } from '../types';
+import type { RegisterDto, AuthTokenDto, UserProfileDto, UserRole } from '../types';
 
 /** Role options shown in the register form selector. */
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
@@ -64,8 +64,15 @@ export function RegisterPage() {
     };
 
     try {
-      const response = await apiClient.post<AuthResponseDto>('/auth/register', dto);
-      login(response.data.user, response.data.token);
+      // Registration returns the profile but no token: the account exists,
+      // the session does not yet. Logging in right after spares the user a
+      // second form with credentials they just typed.
+      const profile = await apiClient.post<UserProfileDto>('/auth/register', dto);
+      const { data } = await apiClient.post<AuthTokenDto>('/auth/login', {
+        email: dto.email,
+        password: dto.password,
+      });
+      login(profile.data, data.accessToken);
       // Redirect to /credentials so the user sets up their secrets immediately.
       navigate({ to: '/credentials' });
     } catch (err: any) {
