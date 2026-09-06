@@ -37,8 +37,6 @@ export const BEDROCK_MODEL_ARN_PATTERN = `arn:aws:bedrock:${REGION}::foundation-
 export const REDIS_PORT = 6379;
 
 export const ATLAS_MONGO_PORT = 27017;
-export const ATLAS_INSTANCE_SIZE = "M10";
-export const ATLAS_REGION = "EU_SOUTH_1"; // nomenclatura regioni Atlas per AWS eu-south-1
 
 export const ARTIFACTS_LIFECYCLE_EXPIRATION_DAYS = 30;
 

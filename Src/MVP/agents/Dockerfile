@@ -1,17 +1,15 @@
 # Python slim image
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
 # Install make for potential system dependencies (optional)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends make \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk update \
+    && apk add --no-cache make
 
 # Copy dependency management files and source code
 COPY pyproject.toml ./
 COPY src ./src
-COPY tests ./tests
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 

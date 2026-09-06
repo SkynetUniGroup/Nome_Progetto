@@ -1,10 +1,55 @@
+networks:
+  codeguardian-net:
+    driver: bridge
+
 services:
+  # Python agents service (FastAPI/Uvicorn on :8000, per agents/Dockerfile).
+  # Not exposed to the host — only reachable from other containers, at
+  # http://agents:8000, matching AGENTS_SERVICE_URL in backend/.env.
+  agents:
+    build: ./agents
+    env_file:
+      - .env
+    environment:
+      # Same override rationale as the backend service: inside the Docker
+      # network, containers reach each other by service name, never by
+      # localhost or the backend's own hostnames.
+      BACKEND_BASE_URL: http://backend:3000
+      MONGO_URI: mongodb://mongodb:27017/codeguardian
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      backend:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - "5173:80"
+    networks:
+      - codeguardian-net
+    depends_on:
+      - backend
+    env_file:
+      - .env
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://backend:3000/api/v1}
+
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
     ports:
       - "3000:3000"
+    networks:
+      - codeguardian-net
     env_file:
-      - ./backend/.env
+      - .env
     environment:
       # Overrides the values from .env: inside the Docker network, containers
       # reach each other by service name, never by localhost.
@@ -20,8 +65,15 @@ services:
       - ./backend:/app
       - /app/node_modules
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/v1/auth/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongodb:
     image: mongo:7
@@ -29,29 +81,37 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    networks:
+      - codeguardian-net
+    healthcheck:
+      test: echo "db.runCommand('ping').ok" | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    networks:
+      - codeguardian-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Python agents service (FastAPI/Uvicorn on :8000, per agents/Dockerfile).
-  # Not exposed to the host — only reachable from other containers, at
-  # http://agents:8000, matching AGENTS_SERVICE_URL in backend/.env.
-  agents:
-    build: ./agents
-    env_file:
-      - ./agents/.env
-    environment:
-      # Same override rationale as the backend service: inside the Docker
-      # network, containers reach each other by service name, never by
-      # localhost or the backend's own hostnames.
-      BACKEND_BASE_URL: http://backend:3000
-      MONGO_URI: mongodb://mongodb:27017/codeguardian
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      - mongodb
-      - redis
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - codeguardian-net
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
 
 volumes:
   mongo_data:
+  minio_data:

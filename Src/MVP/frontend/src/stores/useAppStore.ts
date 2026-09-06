@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { Report, Task, OperationCode, ReportStatus } from '../types';
+import { create } from "zustand";
+import { Report, TaskEntry, OperationCode } from "../types";
 
 interface AnalysisContext {
   id: string;
@@ -11,7 +11,7 @@ interface AnalysisContext {
 
 interface AppState {
   contexts: AnalysisContext[];
-  tasks: Task[];
+  tasks: TaskEntry[];
   reports: Record<string, Report>;
   currentTaskId: string | null;
   websocketConnected: boolean;
@@ -26,9 +26,9 @@ interface AppState {
 
 interface AppActions {
   addContext: (context: AnalysisContext) => void;
-  setTasks: (tasks: Task[]) => void;
-  addTask: (task: Task) => void;
-  updateTask: (taskId: string, updates: Partial<Task>) => void;
+  setTasks: (tasks: TaskEntry[]) => void;
+  addTask: (task: TaskEntry) => void;
+  updateTask: (taskId: string, updates: Partial<TaskEntry>) => void;
   setCurrentTask: (taskId: string | null) => void;
   addReport: (report: Report) => void;
   setWebSocketConnected: (connected: boolean) => void;
@@ -53,31 +53,33 @@ export const useAppStore = create<AppStore>((set) => ({
   formData: null,
 
   // Actions
-  addContext: (context) => set((state) => ({
-    contexts: [...state.contexts, context]
-  })),
+  addContext: (context) =>
+    set((state) => ({
+      contexts: [...state.contexts, context],
+    })),
 
   setTasks: (tasks) => set({ tasks }),
 
-  addTask: (task) => set((state) => ({
-    tasks: [...state.tasks, task]
-  })),
+  addTask: (task) =>
+    set((state) => ({
+      tasks: [...state.tasks, task],
+    })),
 
-  updateTask: (taskId, updates) => set((state) => ({
-    tasks: state.tasks.map(t =>
-      t.id === taskId ? { ...t, ...updates } : t
-    )
-  })),
+  updateTask: (taskId, updates) =>
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, ...updates } : t)),
+    })),
 
   setCurrentTask: (taskId) => set({ currentTaskId: taskId }),
 
-  addReport: (report) => set((state) => ({
-    reports: { ...state.reports, [report.id]: report }
-  })),
+  addReport: (report) =>
+    set((state) => ({
+      reports: { ...state.reports, [report.id]: report },
+    })),
 
   setWebSocketConnected: (connected) => set({ websocketConnected: connected }),
 
   setConfigured: (status) => set({ isConfigured: status }),
-  
+
   setFormData: (data) => set({ formData: data }),
 }));

@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { HydratedDocument } from "mongoose";
 
 export type UsageCounterDocument = HydratedDocument<UsageCounter>;
 
@@ -9,14 +9,14 @@ export type UsageCounterDocument = HydratedDocument<UsageCounter>;
 @Schema()
 export class UsageCounter {
   @Prop({ required: true })
-  userId: string;
+  userId!: string;
 
   // "YYYY-MM" for the current calendar month.
   @Prop({ required: true })
-  yearMonth: string;
+  yearMonth!: string;
 
   @Prop({ required: true, default: 0 })
-  count: number;
+  count!: number;
 }
 
 export const UsageCounterSchema = SchemaFactory.createForClass(UsageCounter);

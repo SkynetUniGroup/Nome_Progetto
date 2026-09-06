@@ -3,10 +3,10 @@ import {
   OnGatewayConnection,
   WebSocketGateway,
   WebSocketServer,
-} from '@nestjs/websockets';
-import { JwtService } from '@nestjs/jwt';
-import { Server, Socket } from 'socket.io';
-import { PendingInput, TaskError, TaskStatus } from '../tasks/task.types';
+} from "@nestjs/websockets";
+import { JwtService } from "@nestjs/jwt";
+import { Server, Socket } from "socket.io";
+import { PendingInput, TaskError, TaskStatus } from "../tasks/task.types";
 
 interface HandshakeJwtPayload {
   sub: string;
@@ -24,11 +24,11 @@ interface HandshakeJwtPayload {
 })
 export class EventsGateway implements OnGatewayConnection {
   @WebSocketServer()
-  private readonly server: Server;
+  private readonly server!: Server;
 
   constructor(private readonly jwt: JwtService) {}
 
-  handleConnection(@ConnectedSocket() client: Socket): void {
+  handleConnection(client: Socket): void {
     const token = client.handshake.auth?.token as string | undefined;
     if (!token) {
       client.disconnect();
@@ -43,41 +43,20 @@ export class EventsGateway implements OnGatewayConnection {
     }
   }
 
-  emitTaskProgress(
-    userId: string,
-    taskId: string,
-    stage: string,
-    percent: number,
-  ): void {
-    this.server
-      .to(this.roomFor(userId))
-      .emit('task.progress', { taskId, stage, percent });
+  emitTaskProgress(userId: string, taskId: string, stage: string, percent: number): void {
+    this.server.to(this.roomFor(userId)).emit("task.progress", { taskId, stage, percent });
   }
 
-  emitTaskUpdated(
-    userId: string,
-    taskId: string,
-    status: TaskStatus,
-    reportId?: string,
-  ): void {
-    this.server
-      .to(this.roomFor(userId))
-      .emit('task.updated', { taskId, status, reportId });
+  emitTaskUpdated(userId: string, taskId: string, status: TaskStatus, reportId?: string): void {
+    this.server.to(this.roomFor(userId)).emit("task.updated", { taskId, status, reportId });
   }
 
   emitTaskFailed(userId: string, taskId: string, error: TaskError): void {
-    this.server.to(this.roomFor(userId)).emit('task.failed', { taskId, error });
+    this.server.to(this.roomFor(userId)).emit("task.failed", { taskId, error });
   }
 
-  emitBatchCompleted(
-    userId: string,
-    batchId: string,
-    completed: number,
-    failed: number,
-  ): void {
-    this.server
-      .to(this.roomFor(userId))
-      .emit('batch.completed', { batchId, completed, failed });
+  emitBatchCompleted(userId: string, batchId: string, completed: number, failed: number): void {
+    this.server.to(this.roomFor(userId)).emit("batch.completed", { batchId, completed, failed });
   }
 
   // Flat shape — { taskId, kind, taskIds?, technicalReportId? } — matching
@@ -98,14 +77,11 @@ export class EventsGateway implements OnGatewayConnection {
     taskId: string,
     pendingInput: Exclude<PendingInput, null>,
   ): void {
-    const taskIds =
-      'taskIds' in pendingInput ? pendingInput.taskIds : undefined;
+    const taskIds = "taskIds" in pendingInput ? pendingInput.taskIds : undefined;
     const technicalReportId =
-      'technicalReportId' in pendingInput
-        ? pendingInput.technicalReportId
-        : undefined;
+      "technicalReportId" in pendingInput ? pendingInput.technicalReportId : undefined;
 
-    this.server.to(this.roomFor(userId)).emit('task.inputRequired', {
+    this.server.to(this.roomFor(userId)).emit("task.inputRequired", {
       taskId,
       kind: pendingInput.kind,
       taskIds,

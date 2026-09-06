@@ -1,34 +1,27 @@
-import {
-  IsEmail,
-  IsIn,
-  IsString,
-  Matches,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
-import { USER_ROLES, type UserRole } from '../schemas/user.schema';
+import { IsEmail, IsIn, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { USER_ROLES, type UserRole } from "../schemas/user.schema";
 
 export class RegisterDto {
   @IsString()
   @MinLength(1)
   @MaxLength(40)
-  firstName: string;
+  firstName!: string;
 
   @IsString()
   @MinLength(1)
   @MaxLength(40)
-  lastName: string;
+  lastName!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
   @MinLength(8)
   @Matches(/(?=.*[A-Za-z])(?=.*\d)/, {
-    message: 'password must contain at least one letter and one digit',
+    message: "password must contain at least one letter and one digit",
   })
-  password: string;
+  password!: string;
 
   @IsIn(USER_ROLES)
-  role: UserRole;
+  role!: UserRole;
 }

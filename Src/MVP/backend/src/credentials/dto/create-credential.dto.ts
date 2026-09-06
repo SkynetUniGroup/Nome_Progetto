@@ -1,9 +1,9 @@
-import { IsIn, IsNotEmpty, IsString } from 'class-validator';
-import { SUPPORTED_PROVIDERS } from '../supported-providers';
+import { IsIn, IsNotEmpty, IsString } from "class-validator";
+import { SUPPORTED_PROVIDERS } from "../supported-providers";
 
 export class CreateCredentialDto {
   @IsIn(SUPPORTED_PROVIDERS)
-  provider: string;
+  provider!: string;
 
   // Deliberately no format pattern: GitHub's PAT format has changed over
   // time (classic 40-char hex, `ghp_`-prefixed, fine-grained
@@ -13,5 +13,5 @@ export class CreateCredentialDto {
   // from its shape.
   @IsString()
   @IsNotEmpty()
-  token: string;
+  token!: string;
 }

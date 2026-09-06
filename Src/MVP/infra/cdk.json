@@ -28,12 +28,10 @@
     "@aws-cdk/core:enablePartitionLiterals": true,
     "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": true,
     "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true,
-    "atlasProfile": "codeguardian-atlas",
-    "atlasOrgId": "6a9131bca411a1484620daf",
-    "atlasProjectName": "code-guardian-mvp",
+    "atlasPrivateEndpointServiceName": "com.amazonaws.vpce.eu-south-1.vpce-svc-01d3753ecda6bc81f",
     "alertEmail": "samuele.bertin@studenti.unipd.it",
     "monthlyBudgetUsd": "320",
-    "githubOrg": "REPLACE_WITH_GITHUB_ORG",
-    "githubRepo": "code-guardian"
+    "githubOrg": "SkynetUniGroup",
+    "githubRepo": "Code_Guardian"
   }
 }

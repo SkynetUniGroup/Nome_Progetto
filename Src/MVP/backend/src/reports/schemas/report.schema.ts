@@ -1,60 +1,54 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
-import type { OperationCode } from '../../common/domain-types';
-import type {
-  Block,
-  Proposal,
-  ReportContext,
-  ReportError,
-  ReportStatus,
-} from '../report.types';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
+import type { OperationCode } from "../../common/domain-types";
+import type { Block, Proposal, ReportContext, ReportError, ReportStatus } from "../report.types";
 
 export type ReportDocument = HydratedDocument<Report>;
 
-@Schema({ timestamps: { createdAt: 'generatedAt', updatedAt: false } })
+@Schema({ timestamps: { createdAt: "generatedAt", updatedAt: false } })
 export class Report {
-  @Prop({ type: Types.ObjectId, ref: 'Task', required: true })
-  taskId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: "Task", required: true })
+  taskId!: Types.ObjectId;
 
   // Denormalized, not exposed in ReportDto — needed for the ownership check
   // and the (userId, generatedAt) index; resolving it through Task at read
   // time would defeat the point of a single indexed query (§12.7).
   @Prop({ required: true })
-  userId: string;
+  userId!: string;
 
   @Prop({ type: String, required: true })
-  operation: OperationCode;
+  operation!: OperationCode;
 
   @Prop({ type: String, required: true })
-  status: ReportStatus;
+  status!: ReportStatus;
 
   // Composed deterministically by the backend, never by the model — always
   // present, even on a FAILED report.
   @Prop({ required: true })
-  title: string;
+  title!: string;
 
   @Prop({ type: String, default: null })
-  summary: string | null;
+  summary!: string | null;
 
   // Machine time only; null when no agent was ever invoked. Whether the
   // agent or the backend writes this is an open point (§11.7) — the field
   // exists either way.
   @Prop({ type: Number, default: null })
-  durationMs: number | null;
+  durationMs!: number | null;
 
   // Persisted, never exposed via the API — flows through from the agent's
   // own state, kept because the PoC already carries it (fig. 3), not
   // because anything currently reads it.
   @Prop()
-  tokensConsumed: number;
+  tokensConsumed!: number;
 
   // Copied from AnalysisContext at assembly time — a report is an immutable
   // record and must stay complete even if the context is later removed.
   @Prop({ type: MongooseSchema.Types.Mixed, required: true })
-  context: ReportContext;
+  context!: ReportContext;
 
   @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
-  body: Block[];
+  body!: Block[];
 
   @Prop({ type: MongooseSchema.Types.Mixed })
   proposal?: Proposal;

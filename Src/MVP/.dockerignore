@@ -1,0 +1,21 @@
+Dockerfile
+.dockerignore
+
+# Evita di copiare le dipendenze locali
+node_modules
+**/node_modules
+.pnpm-store
+
+# Evita di copiare le build locali
+dist
+**/dist
+
+# File di log e di ambiente
+npm-debug.log
+.env
+.env.*
+
+# File OS/IDE
+.DS_Store
+.idea/
+.vscode/

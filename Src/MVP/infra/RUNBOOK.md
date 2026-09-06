@@ -29,25 +29,26 @@ controllabili dal team.
    l'errore tipico in caso di mismatch è `ValidationException: Invocation of
    model ID ... is not supported`.
 
-## 2. MongoDB Atlas -- prerequisiti prima di `cdk deploy CodeGuardian-Atlas`
+## 2. MongoDB Atlas -- handshake manuale prima di `cdk deploy CodeGuardian-Atlas`
 
 Rif. §27.4, §31.1.
 
-1. Generare una **Atlas Programmatic API Key** (ruolo Org Owner o Project
-   Creator) da Atlas -> Organization Settings -> Access Manager -> API Keys.
-2. Attivare in CloudFormation (console, regione eu-south-1) le **Public
-   Extensions** `MongoDB::Atlas::*` (Project, Cluster, PrivateEndpointService,
-   PrivateEndpointAws) -- CloudFormation -> Public extensions -> Activate.
-3. Registrare la chiave come "profilo" in AWS Secrets Manager con il nome
-   atteso dal context `atlasProfile` (default `codeguardian-atlas` in
-   `cdk.json`), nel formato richiesto dal resource provider MongoDB
-   (`PublicKey`/`PrivateKey`).
-4. Deployare con l'Org ID reale:
+Project e cluster M10 sono creati e gestiti a mano nella console Atlas
+(nessuna API key con permessi di scrittura sul progetto è disponibile per il
+team): `lib/atlas-stack.ts` crea solo il lato AWS del PrivateLink.
+
+1. **Chi gestisce Atlas** (Alessandro) crea il Private Endpoint dal progetto
+   Atlas esistente, regione AWS **eu-south-1**, e comunica il service name
+   generato (`com.amazonaws.vpce-svc-...`).
+2. Deployare passando quel service name:
    ```bash
-   npx cdk deploy CodeGuardian-Atlas --context atlasOrgId=<ATLAS_ORG_ID>
+   npx cdk deploy CodeGuardian-Atlas --context atlasPrivateEndpointServiceName=<SERVICE_NAME>
    ```
-5. **Azione Dev post-deploy (§27.4 punto 4, §31.1):** da console Atlas ->
-   Connect -> Private Endpoint, recuperare la connection string generata e
+3. Recuperare l'output `AtlasPrivateEndpointId` e comunicarlo a chi gestisce
+   Atlas: va incollato in console Atlas (Private Endpoint -> AWS) per
+   completare il collegamento.
+4. **Azione Dev post-collegamento (§27.4 punto 4, §31.1):** da console Atlas
+   -> Connect -> Private Endpoint, recuperare la connection string generata e
    aggiornarla nel secret:
    ```bash
    aws secretsmanager put-secret-value \

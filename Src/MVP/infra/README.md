@@ -26,7 +26,8 @@ volta:
 2. Attività manuali propedeutiche: vedi **`RUNBOOK.md`** (richiesta accesso
    Bedrock, chiavi Atlas, secrets GitHub Actions, conferma SNS).
 3. Aggiornare `cdk.json` (`context`) con i valori reali del progetto:
-   `atlasOrgId`, `alertEmail`, `githubOrg`/`githubRepo`, `monthlyBudgetUsd`.
+   `atlasPrivateEndpointServiceName`, `alertEmail`, `githubOrg`/`githubRepo`,
+   `monthlyBudgetUsd`.
 
 ## Quick start
 
@@ -49,7 +50,7 @@ npm run deploy:storage
 npm run deploy:security-groups
 npm run deploy:vpc-endpoints
 npm run deploy:data
-npm run deploy:atlas          # richiede --context atlasOrgId=<...>, vedi RUNBOOK.md
+npm run deploy:atlas          # richiede --context atlasPrivateEndpointServiceName=<...>, vedi RUNBOOK.md
 npm run deploy:compute
 npm run deploy:cloudfront
 npm run deploy:observability
@@ -71,7 +72,7 @@ lib/vpc-endpoints-stack.ts    -- VPC Endpoints Gateway + Interface
 lib/kms-secrets-stack.ts      -- KMS, Secrets Manager, Parameter Store
 lib/storage-stack.ts          -- Bucket S3 artefatti
 lib/data-stack.ts             -- ElastiCache Redis
-lib/atlas-stack.ts            -- MongoDB Atlas (Project, Cluster, PrivateLink)
+lib/atlas-stack.ts            -- MongoDB Atlas, lato AWS del PrivateLink (project/cluster gestiti a mano)
 lib/cicd-identity-stack.ts    -- ECR + ruolo CI/CD (GitHub OIDC)
 lib/compute-stack.ts          -- ECS Fargate, Task Def, IAM, Cloud Map, ALB
 lib/cloudfront-stack.ts       -- Bucket S3 frontend + CloudFront + OAC + routing SPA

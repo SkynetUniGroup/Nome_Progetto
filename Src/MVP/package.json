@@ -1,6 +1,6 @@
 {
   "name": "codeguardian-MVP-monorepo",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "lint": "biome check .",
@@ -24,14 +24,29 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24.0.0",
+      "version": "^26.8.1",
       "onFail": "download"
     }
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.10",
+    "@biomejs/biome": "^2.5.12",
     "@vitest/coverage-v8": "^4.1.11",
-    "lint-staged": "^17.3.0",
+    "lint-staged": "^17.4.1",
     "vitest": "^4.1.11"
+  },
+  "vitest": {
+    "environment": "node",
+    "globals": true,
+    "include": [
+      "**/*.specs.ts"
+    ],
+    "coverage": {
+      "provider": "v8",
+      "reporter": [
+        "text",
+        "json",
+        "html"
+      ]
+    }
   }
 }

@@ -1,26 +1,18 @@
-import {
-  IsArray,
-  IsIn,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Matches,
-} from 'class-validator';
-import { GITHUB_REPO_URL_REGEX } from '../github-url';
-import type { ScopeType } from '../../common/domain-types';
+import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString, Matches } from "class-validator";
+import { GITHUB_REPO_URL_REGEX } from "../github-url";
+import type { ScopeType } from "../../common/domain-types";
 
-const SCOPE_TYPES: ScopeType[] = ['FULL_REPOSITORY', 'FILES', 'DIRECTORIES'];
+const SCOPE_TYPES: ScopeType[] = ["FULL_REPOSITORY", "FILES", "DIRECTORIES"];
 
 export class CreateContextDto {
   @Matches(GITHUB_REPO_URL_REGEX, {
-    message:
-      'repoUrl must be a GitHub repository URL (https://github.com/:owner/:repo)',
+    message: "repoUrl must be a GitHub repository URL (https://github.com/:owner/:repo)",
   })
-  repoUrl: string;
+  repoUrl!: string;
 
   @IsString()
   @IsNotEmpty()
-  branch: string;
+  branch!: string;
 
   @IsOptional()
   @IsString()
@@ -28,7 +20,7 @@ export class CreateContextDto {
   commitSha?: string;
 
   @IsIn(SCOPE_TYPES)
-  scopeType: ScopeType;
+  scopeType!: ScopeType;
 
   // Non-emptiness (for FILES/DIRECTORIES) and emptiness (for
   // FULL_REPOSITORY) are cross-field rules that depend on scopeType — not

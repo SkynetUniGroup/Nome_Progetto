@@ -5,3 +5,5 @@ node_modules/
 .husky/_/
 package.json
 pnpm-lock.yaml
+.vibe/
+.vscode/

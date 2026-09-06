@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { HydratedDocument, Types } from "mongoose";
 
 export type AccessLogDocument = HydratedDocument<AccessLog>;
 
@@ -7,14 +7,14 @@ export type AccessLogDocument = HydratedDocument<AccessLog>;
 export class AccessLog {
   // Required — every GitHub read the internal facade serves happens while
   // processing a specific Task; no documented scenario needs this absent.
-  @Prop({ type: Types.ObjectId, ref: 'Task', required: true })
-  taskId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: "Task", required: true })
+  taskId!: Types.ObjectId;
 
   @Prop({ required: true })
-  endpoint: string;
+  endpoint!: string;
 
   @Prop({ required: true })
-  resource: string;
+  resource!: string;
 }
 
 export const AccessLogSchema = SchemaFactory.createForClass(AccessLog);
