@@ -71,11 +71,33 @@ export default defineConfig(({ mode }) => ({
         /**
          * Split vendor code into a separate chunk so the browser can cache
          * React, TanStack Router, etc. independently from application code.
+         *
+         * Forma a funzione: la forma a oggetto
+         * (`{ vendor: ['react', ...] }`) non è più accettata dal bundler
+         * usato da Vite 8, che fallisce la build con "manualChunks is not a
+         * function". Il raggruppamento resta identico.
          */
-        manualChunks: {
-          vendor: ['react', 'react-dom', '@tanstack/react-router'],
-          state: ['zustand'],
-          network: ['axios', 'socket.io-client'],
+        manualChunks(id: string) {
+          const percorso = id.replace(/\\/g, '/');
+          if (!percorso.includes('/node_modules/')) return;
+
+          // Con pnpm il percorso reale è
+          // .../node_modules/.pnpm/<pkg>@<ver>/node_modules/<pkg>/...:
+          // l'ultimo segmento node_modules porta il nome vero.
+          const dopoNodeModules = percorso.split('/node_modules/').pop() ?? '';
+          const pacchetto = dopoNodeModules.startsWith('@')
+            ? dopoNodeModules.split('/').slice(0, 2).join('/')
+            : dopoNodeModules.split('/')[0];
+
+          if (pacchetto === 'zustand') return 'state';
+          if (pacchetto === 'axios' || pacchetto === 'socket.io-client') return 'network';
+          if (
+            pacchetto === 'react' ||
+            pacchetto === 'react-dom' ||
+            pacchetto === '@tanstack/react-router'
+          ) {
+            return 'vendor';
+          }
         },
       },
     },

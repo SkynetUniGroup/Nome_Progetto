@@ -25,6 +25,7 @@ const makeReport = (overrides: Partial<Report> = {}): Report => ({
   status: 'COMPLETED',
   body: [],
   generatedAt: '2026-08-18T10:00:00Z',
+  title: 'OWASP Top 10 vulnerability scan — owner/repo@main',
   ...overrides,
 });
 

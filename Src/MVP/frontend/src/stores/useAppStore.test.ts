@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore } from './useAppStore';
-import type { Task, Report } from '../types';
+import type { Report } from '../types';
+import type { StoredTask } from './useAppStore';
 
 // Lo store e' un singleton globale (create() di zustand): resettiamo lo
 // stato a quello iniziale prima di ogni test per evitare che i test si
@@ -11,7 +12,7 @@ beforeEach(() => {
   useAppStore.setState(initialState, true);
 });
 
-const makeTask = (overrides: Partial<Task> = {}): Task => ({
+const makeTask = (overrides: Partial<StoredTask> = {}): StoredTask => ({
   id: 'task-1',
   contextId: 'ctx-1',
   operation: 'SECURITY_OWASP',
@@ -99,6 +100,7 @@ describe('useAppStore', () => {
     const reportA: Report = {
       id: 'report-a', taskId: 't', agentId: 'a', operation: 'SECURITY_OWASP',
       status: 'COMPLETED', body: [], generatedAt: '2026-01-01T00:00:00Z',
+      title: 'OWASP Top 10 vulnerability scan — owner/repo@main',
     };
     const reportB: Report = { ...reportA, id: 'report-b' };
 
@@ -110,9 +112,14 @@ describe('useAppStore', () => {
   });
 
   it('addReport con stesso id sovrascrive il report precedente', () => {
+    // Un Report esiste solo in stato terminale (COMPLETED o FAILED): la
+    // versione precedente diceva 'RUNNING', che è uno stato della Task, non
+    // del Report. La sovrascrittura si osserva lo stesso passando da
+    // FAILED a COMPLETED.
     const v1: Report = {
       id: 'report-a', taskId: 't', agentId: 'a', operation: 'SECURITY_OWASP',
-      status: 'RUNNING', body: [], generatedAt: '2026-01-01T00:00:00Z',
+      status: 'FAILED', body: [], generatedAt: '2026-01-01T00:00:00Z',
+      title: 'OWASP Top 10 vulnerability scan — owner/repo@main',
     };
     const v2: Report = { ...v1, status: 'COMPLETED' };
 

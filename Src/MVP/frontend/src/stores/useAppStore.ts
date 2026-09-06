@@ -1,5 +1,31 @@
 import { create } from 'zustand';
-import { Report, Task, OperationCode, ReportStatus } from '../types';
+// `Task` e `ReportStatus` non sono mai esistiti in ../types: erano rimasti
+// indietro rispetto all'allineamento del client ai contratti del backend, e
+// nessuno se n'era accorto perché la compilazione dei tipi non veniva
+// eseguita da nessuna parte — Vitest cancella i tipi senza controllarli, e
+// in CI il passo di build non esisteva.
+import { Report, OperationCode, TaskStatus } from '../types';
+
+/**
+ * Una task come la tiene *questo* store.
+ *
+ * Non è `TaskEntry`: quello è il contratto di `GET /tasks`, che arriva già
+ * completo di avanzamento, stadio corrente ed eventuale errore. Qui la task
+ * nasce nel momento in cui l'interfaccia la avvia (RepositorySelection), con
+ * i soli campi noti allora — più il `contextId`, che il contratto del
+ * backend non riporta ma che serve alla navigazione locale — e si arricchisce
+ * poi via `updateTask`.
+ */
+export interface StoredTask {
+  id: string;
+  contextId: string;
+  operation: OperationCode;
+  status: TaskStatus;
+  progressPercent?: number;
+  currentStage?: string | null;
+  reportId?: string | null;
+  error?: { code: string; message: string; stage: string } | null;
+}
 
 interface AnalysisContext {
   id: string;
@@ -11,7 +37,7 @@ interface AnalysisContext {
 
 interface AppState {
   contexts: AnalysisContext[];
-  tasks: Task[];
+  tasks: StoredTask[];
   reports: Record<string, Report>;
   currentTaskId: string | null;
   websocketConnected: boolean;
@@ -26,9 +52,9 @@ interface AppState {
 
 interface AppActions {
   addContext: (context: AnalysisContext) => void;
-  setTasks: (tasks: Task[]) => void;
-  addTask: (task: Task) => void;
-  updateTask: (taskId: string, updates: Partial<Task>) => void;
+  setTasks: (tasks: StoredTask[]) => void;
+  addTask: (task: StoredTask) => void;
+  updateTask: (taskId: string, updates: Partial<StoredTask>) => void;
   setCurrentTask: (taskId: string | null) => void;
   addReport: (report: Report) => void;
   setWebSocketConnected: (connected: boolean) => void;

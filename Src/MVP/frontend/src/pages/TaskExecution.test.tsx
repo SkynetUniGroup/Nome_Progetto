@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { useAppStore } from '../stores/useAppStore';
-import type { Task } from '../types';
+import type { StoredTask } from '../stores/useAppStore';
 
 let currentTaskId = 'task-1';
 vi.mock('@tanstack/react-router', () => ({
@@ -19,7 +19,7 @@ const { default: TaskExecution } = await import('./TaskExecution');
 
 const initialState = useAppStore.getState();
 
-const makeTask = (overrides: Partial<Task> = {}): Task => ({
+const makeTask = (overrides: Partial<StoredTask> = {}): StoredTask => ({
   id: 'task-1',
   contextId: 'ctx-1',
   operation: 'SECURITY_OWASP',
