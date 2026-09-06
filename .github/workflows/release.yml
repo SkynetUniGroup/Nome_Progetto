@@ -1,4 +1,4 @@
-﻿name: Release Production
+name: Release Production
 on:
   push:
     tags:
@@ -14,6 +14,10 @@ jobs:
         uses: actions/checkout@v7
 
       # === Environment setup ===
+      # pnpm/setup esegue gia' `pnpm install` in working-directory, ma quel
+      # manifest contiene solo gli strumenti di monorepo (biome): le
+      # dipendenze di backend/ e frontend/ vanno installate a parte, vedi
+      # il passo "Install backend and frontend dependencies".
       - name: Setup pnpm + Node.js
         uses: pnpm/setup@v2.1.0
         with:
@@ -35,12 +39,14 @@ jobs:
             ${{ runner.os }}-pip-
 
       # === Node.js (backend/frontend) ===
-      - name: Install Node.js dependencies
-        run: pnpm install
+      - name: Install backend and frontend dependencies
+        run: pnpm run install:all
 
       - name: Node.js linting
         run: pnpm lint
 
+      # Esegue le due suite native: Jest per il backend (i .spec.ts usano
+      # jest.mock e non girano sotto Vitest), Vitest per il frontend.
       - name: Node.js unit tests
         run: pnpm test:unit
 
@@ -57,13 +63,25 @@ jobs:
         working-directory: Src/MVP/agents
         run: python -m pytest
 
-      # === Integration tests (both Python and Node.js) ===
+      # === Integration tests (TI_05, backend contro lo stack reale) ===
       - name: Integration tests
+        env:
+          CORS_ORIGIN: http://localhost:5173
+          MONGODB_URI: mongodb://localhost:27017/codeguardian_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-jwt-secret-not-a-real-one
+          CREDENTIAL_MASTER_KEY: ci-credential-master-key-0123
+          INTERNAL_SHARED_SECRET: ci-internal-shared-secret-01
+          REPORTS_BUCKET_NAME: code-guardian-reports
+          S3_REGION: us-east-1
+          S3_ENDPOINT: http://localhost:9000
+          S3_FORCE_PATH_STYLE: 'true'
+          S3_ACCESS_KEY_ID: minioadmin
+          S3_SECRET_ACCESS_KEY: minioadmin
         run: |
-          docker-compose -f docker-compose.test.yml up -d
-          pnpm test:integration:test
-          cd agents && python -m pytest tests/integration/ -v
-          docker-compose -f docker-compose.test.yml down
+          pnpm run test:integration:up
+          pnpm run test:integration:test
+          pnpm run test:integration:down
 
       - name: Build Node.js
         run: pnpm build
@@ -75,17 +93,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-south-1
 
+      # `pnpm build` produce il bundle del frontend in frontend/dist, non
+      # in ./dist: da Src/MVP la cartella ./dist non esiste.
       - name: Deploy frontend on S3
         run: |
-          aws s3 sync ./dist s3://code-guardian-frontend --delete
+          aws s3 sync ./frontend/dist s3://code-guardian-frontend --delete
           aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
 
       - name: Login Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Il Dockerfile del backend sta in backend/, non in Src/MVP.
       - name: Build, tag, and push Docker image
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-south-1.amazonaws.com/code-guardian-backend:${{ github.ref_name }} .
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-south-1.amazonaws.com/code-guardian-backend:${{ github.ref_name }} ./backend
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-south-1.amazonaws.com/code-guardian-backend:${{ github.ref_name }}
 
       - name: Deploy to ECS

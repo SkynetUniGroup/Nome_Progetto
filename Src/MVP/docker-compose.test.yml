@@ -1,9 +1,41 @@
-﻿version: "3.8"
+# Stack di supporto per i test di integrazione (TI_05).
+#
+# Deve offrire gli stessi servizi esterni che l'AppModule apre all'avvio —
+# Mongo, Redis e lo storage a oggetti — altrimenti `test:integration:test`
+# non arriva nemmeno a istanziare l'applicazione. Le immagini e le
+# credenziali ricalcano docker-compose.yml, ma senza volumi persistenti:
+# ogni esecuzione parte da dati vuoti.
 services:
   mongodb:
-    image: mongo:latest
+    image: mongo:7
     ports:
       - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: test
-      MONGO_INITDB_ROOT_PASSWORD: test
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
