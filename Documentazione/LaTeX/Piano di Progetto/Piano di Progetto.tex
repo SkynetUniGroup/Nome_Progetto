@@ -75,7 +75,7 @@
         \renewcommand{\arraystretch}{1.5}
         \begin{tabularx}{\textwidth}{|l|X|}
             \hline
-            \textbf{Versione} & \textit{1.3.0} \\ \hline
+            \textbf{Versione} & \textit{1.4.0} \\ \hline
     
             \textbf{Uso} & \textit{Esterno} \\ \hline
             \textbf{Destinatari} & \textit{Prof. Tullio Vardanega, Prof. Riccardo Cardin} \\ \hline
@@ -107,6 +107,7 @@
     \hline
     \textbf{Ver.} & \textbf{Data} & \textbf{Descrizione} & \textbf{Autore} & \textbf{Verificatore} \\ \hline
     \endhead
+        1.4.0 & 2026/09/06 & \textit{Consuntivo} \textit{sprint} 14 e \textit{preventivo} \textit{sprint} 15 & Dario Pirrone & - \\ \hline
         1.3.0 & 2026/08/27 & \textit{Consuntivo} \textit{sprint} 13 e \textit{preventivo} \textit{sprint} 14 & Andrea Fistarol & Edoardo Granziero \\ \hline
         1.2.1 & 2026/08/21 & Aggiunta versione al riferimento del glossario e aggiunta data di accesso alle risorse web di riferimento & Marco Barbiero & Dario Pirrone \\ \hline
         1.2.0 & 2026/08/18 & \textit{Consuntivo} \textit{sprint} 12 e \textit{Preventivo sprint} 13 & Andrea Fistarol & Dario Pirrone \\ \hline
@@ -2862,5 +2863,154 @@ Le risorse economiche previste per lo \textit{sprint} sono:
         \textbf{Costo totale} & \EUR{150} & \EUR{100} & \EUR{0} & \EUR{50} & \EUR{810} & \EUR{120} & \textbf{\EUR{1.230}} \\ \hline
     \end{tabularx}
     \caption{\textit{Preventivo} economico - \textit{sprint} 14}
+\end{table}
+
+\paragraph{\textit{Consuntivo}}~
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabularx}{\textwidth}{|c|X|c|}
+        \hline
+        \textbf{\#} & \textbf{Descrizione} & \textbf{Stato} \\ \hline
+        223 & Termine della progettazione del \textit{backend} per soddisfare tutti i requisiti & Completata \\ \hline
+        224 & Progettazione di test esaustivi & 90\% \\ \hline
+        225 & Progettazione dell'integrazione tra \textit{backend}, \textit{frontend} e \textit{AWS} & Completata \\ \hline
+        237 & Creazione del grafico \textit{Burndown} per lo \textit{sprint} 14 & 0\% \\ \hline
+        236 & Creazione slide per incontro di monitoraggio & Completata \\ \hline
+        238 & Stesura del verbale del 21/08 & Completata \\ \hline
+        239 & Scrittura di \textit{consuntivo} dello \textit{sprint} 13 e \textit{preventivo} dello \textit{sprint} 14 & Completata \\ \hline
+        -- & \textit{Issue} riguardanti alla programmazione dell'infrastruttura \textit{AWS} & Completata \\ \hline
+        -- & \textit{Issue} riguardanti alla programmazione del \textit{frontend} & Completata \\ \hline
+        -- & \textit{Issue} riguardanti alla programmazione del \textit{backend} & 85\% \\ \hline
+        -- & \textit{Issue} riguardanti alla programmazione degli agenti & 95\% \\ \hline
+        278 & Glossario: Aggiungere build da \textbf{PdP} e collegarlo & 0\% \\ \hline
+        279 & Glossario: Inserire i nuovi termini delle \textbf{NdP} e collegarli & 0\% \\ \hline
+        280 & Re-baselining del preventivo orario: riallineamento risorse e ruoli & Completata \\ \hline
+        281 & \textbf{NdP}: Aggiornare struttura repo & Completata \\ \hline
+        283 & Setup dei workflow (\textit{PR} check, deploy staging, release production) previa revisione critica & Completata \\ \hline
+        284 & Predisposizione della configurazione dei test con pnpm (Vitest, pytest) & Completata \\ \hline
+        287 & Aggiornamento repository secondo \textbf{NdP} (\textit{branch} e protezione) & Completata \\ \hline
+        285 & Predisposizione della configurazione del linting e del formatting con pnpm (Biome, Pylint, Black) & Completata \\ \hline
+        212 & Applicazione delle correzioni del Prof. Cardin all'\textbf{AdR}, portando il documento alla versione 2.0.0 & 0\% \\ \hline
+        214 & Applicazione delle modifiche ai documenti secondo le indicazioni del Prof. Vardanega & 60\% \\ \hline
+    \end{tabularx}
+    \caption{Attività svolte - \textit{sprint 14}}
+\end{table}
+
+\subparagraph{Note sui mancati completamenti}
+\begin{itemize}
+    \item \textbf{224}: valutazione errata del soddifacimento della \textit{issue}.
+    \item \textbf{237}: a causa del mancato tracciamento corretto del andamento delle \textit{issue} non è stato possibile realizzare un grafico utile.
+    \item \textbf{programmazione backend}: sottostima del lavoro.
+    \item \textbf{programmazione agenti}: sottostima del lavoro e conflitto con \textit{issue} di progettazione test (le issue mancanti riguardano i test degli agenti).
+    \item \textbf{278}: sottostima del lavoro.
+    \item \textbf{279}: sottostima del lavoro.
+    \item \textbf{212}: non iniziata per bassa priorità.
+    \item \textbf{214}: applicate alcune modifiche ai documenti, resto non fatto per bassa priorità, è necessaio dividere il restante lavoro in \textit{issue} più atomiche.
+\end{itemize}
+
+\begin{table}[H]
+    \hspace*{-0.7cm}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l
+            |>{\centering\arraybackslash}p{0.1\textwidth}
+            |>{\centering\arraybackslash}p{0.1\textwidth}
+            |>{\centering\arraybackslash}p{0.1\textwidth}
+            |>{\centering\arraybackslash}p{0.1\textwidth}
+            |>{\centering\arraybackslash}p{0.1\textwidth}
+            |>{\centering\arraybackslash}p{0.1\textwidth}
+            |c c|}
+        \hline
+        \textbf{\textit{Sprint} 14} & \multicolumn{6}{|c|}{\textbf{Ruolo}} & \multicolumn{2}{|c|}{} \\ \hline
+        \textbf{Membro} & \textbf{RE} & \textbf{AM} & \textbf{AN} & \textbf{PG} & \textbf{PR} & \textbf{VE} & \multicolumn{2}{|c|}{\textbf{Totale}} \\ \hline
+        A. Fistarol & 4 (-1) & 3 (-2) & - & - & - & 1 (+1) & \textbf{8} & (-2) \\ \hline
+        D. Pirrone & - & - & - & - & 8 & - & \textbf{8} & (0) \\ \hline
+        E. Granziero & - & - & - & - & - & 6 (-2) & \textbf{6} & (-2) \\ \hline
+        M. Barbiero & - & - & - & - & 14 (-1) & - & \textbf{14} & (-1) \\ \hline
+        S. Bertin & - & - & - & - & 14 (-6) & - & \textbf{14} & (-6) \\ \hline
+        S. Ristovic & - & - & - & 1 (-1) & 12 (+1) & - & \textbf{13} & (0) \\ \hline
+        \textbf{Ore totali} & \textbf{4 (-1)} & \textbf{3 (-2)} & \textbf{0} & \textbf{1 (-1)} & \textbf{48 (-6)} & \textbf{7 (-1)} & \textbf{63} & (+5) \\ \hline
+    \end{tabular}
+    \caption{\textit{Consuntivo} orario - \textit{sprint} 14}
+\end{table}
+
+\begin{table}[H]
+    \centerline{
+        \centering
+        \renewcommand{\arraystretch}{1.3}
+        \begin{tabularx}{1.00\textwidth}{|X|c|c|c|c|c|c|c|}
+            \hline
+            \textbf{\textit{Sprint} 14} & \textbf{RE} & \textbf{AM} & \textbf{AN} & \textbf{PG} & \textbf{PR} & \textbf{VE} & \textbf{Totale} \\ \hline  
+            \textbf{Costo orario} & \EUR{30} & \EUR{20} & \EUR{25} & \EUR{25} & \EUR{15} & \EUR{15} & / \\ \hline
+            \textbf{Costo totale} & \EUR{120} & \EUR{60} & \EUR{0} & \EUR{25} & \EUR{720} & \EUR{105} & \textbf{\EUR{1030}} \\ \hline
+            \textbf{{\textDelta} preventivo} & \EUR{-30} & \EUR{-40} & \EUR{0} & \EUR{-25} & \EUR{-90} & \EUR{-15} & \textbf{\EUR{-200}} \\ \hline
+            \textbf{Saldo a fine \textit{sprint}} & \textbf{\EUR{210}} & \textbf{\EUR{200}} & \textbf{\EUR{0}} & \textbf{\EUR{50}} & \textbf{\EUR{570}} & \textbf{\EUR{885}} & \textbf{\EUR{1.915}}\\ \hline
+        \end{tabularx}
+    }
+    \caption{\textit{Consuntivo} economico - \textit{sprint} 14}
+\end{table}
+
+\paragraph{Retrospettiva}~\\
+Al termine dello \textit{sprint} non tutte le \textit{issue} sono state portate a termine, questo a causa di una mancata analisi dei tempi necessari per svolgere ciascuna \textit{issue}; in questo \textit{sprint} si è cercato di avere una pianificazione di \textit{issue} più atomiche e con una stima preventiva dei tempi per ciascuna \textit{issue} oltre a delle scadenze specifiche, questo approccio sicuramente è un passo verso la giusta direzione ma senza una corretta istanziazione di tempi di analisi del lavoro effettivo da svolgere prima della creazione ed assegnazione delle \textit{issue} il problema di stima errata dei tempi di lavoro rimane presente, inoltre il modo in cui sono state strutturate le \textit{issue} in questo \textit{sprint} ha portato un contrasto con le nuove norme di progetto instanziate ad inizio \textit{sprint}, in particolare le norme relative ai \textit{branch} e ai \textit{commit} su \textit{GitHub}.
+
+
+
+\paragraph{Misure Correttive}
+\begin{itemize}
+    \item Ogni membro del gruppo è chiamato a fermare i lavori in sviluppo almeno 24 ore prima della riunione di fine \textit{sprint}, per dedicarsi totalmente nella analisi del lavoro restante e pianificazione di nuove \textit{issue}, in particolare riguardanti gli aspetti di progetto di cui si ha maggiore conoscenza.
+\end{itemize}
+
+\subparagraph{Analisi dei Rischi}
+\begin{itemize}
+    \item \textbf{RO1, RO4}: Restano sempre presenti i rischi di scarsa organizzazione e sottostima delle attività, questi rischi risultano complessi da mitigare anche a causa del tempo estremamente ristretto prima della conclusione del progetto, in queste condizioni è complesso trovare tempi extra per pianificare i compiti con la dovuta cura.
+    \item \textbf{RO8 - Riunioni Inefficaci}: Le riunioni interne hanno durata superiore al necessario portando a stanchezza e perdita di focus nelle decisione prese.
+\end{itemize}
+
+
+
+\subsection{\textit{Sprint} 15: 01/09/2026 - 7/09/2026}
+\paragraph{Obbiettivi e attività} Lo \textit{sprint} durerà 7 gg e il suo termine sarà un giorno prima del incontro di esposizione del \textbf{MVP} al azienda \textbf{proponente} (8 settembre, data di "backup" il 10 settembre).
+Il focus delle attività pianificate riguarda il completamento del \textbf{MVP}, con i dovuti test, più nel dettaglio:
+\begin{itemize}
+    \item Conclusione della programmazione del \textit{backend}.
+    \item Allineamento punti di contatto tra \textit{backend}, \textit{frontend} ed infrastruttura \textit{AWS}.
+    \item Debug e test del \textbf{MVP}.
+    \item Stesura \textbf{Specifiche Tecniche}.
+    \item Stesura \textbf{Manuale Utente}.
+\end{itemize}
+
+\paragraph{\textit{Preventivo} orario ed economico}
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabularx}{0.9\textwidth}{|X|c|c|c|c|c|c|c|}
+        \hline
+        \textbf{\textit{Sprint} 15} & \multicolumn{6}{|c|}{\textbf{Ruolo}} & \\ \hline
+        \textbf{Membro} & \textbf{RE} & \textbf{AM} & \textbf{AN} & \textbf{PG} & \textbf{PR} & \textbf{VE} & \textbf{Totale} \\ \hline
+        Andrea Fistarol & - & - & - & - & 17 & -  & \textbf{17} \\ \hline
+        Dario Pirrone & 2 & - & - & - & - & 5 & \textbf{7} \\ \hline
+        Edoardo Granziero & - & - & - & - & 15 & - & \textbf{15} \\ \hline
+        Marco Barbiero & - & - & - & - & - & - & \textbf{0} \\ \hline
+        Samuele Bertin & - & 2 & - & - & 3 & - & \textbf{5} \\ \hline
+        Sara Ristovic & - & - & - & - & 8 & - & \textbf{8} \\ \hline
+        \textbf{Ore totali per ruolo} & \textbf{2} & \textbf{2} & \textbf{0} & \textbf{0} & \textbf{43} & \textbf{5} & \textbf{52}\\ \hline
+    \end{tabularx}
+    \caption{\textit{Preventivo} orario - \textit{sprint} 15}
+\end{table}
+
+Le risorse economiche previste per lo \textit{sprint} sono:
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabularx}{0.9\textwidth}{|X|c|c|c|c|c|c|c|}
+        \hline
+        \textbf{\textit{Sprint} 15} & \textbf{RE} & \textbf{AM} & \textbf{AN} & \textbf{PG} & \textbf{PR} & \textbf{VE} & \textbf{Totale} \\ \hline
+        \textbf{Costo orario} & \EUR{30} & \EUR{20} & \EUR{25} & \EUR{25} & \EUR{15} & \EUR{15} & / \\ \hline
+        \textbf{Costo totale} & \EUR{60} & \EUR{40} & \EUR{0} & \EUR{0} & \EUR{645} & \EUR{75} & \textbf{\EUR{820}} \\ \hline
+    \end{tabularx}
+    \caption{\textit{Preventivo} economico - \textit{sprint} 15}
 \end{table}
 \end{document}
