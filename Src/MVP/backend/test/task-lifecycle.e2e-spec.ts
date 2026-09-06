@@ -23,6 +23,12 @@ import { Report, ReportDocument } from './../src/reports/schemas/report.schema';
  *
  * Percorso verificato: registrazione → credenziale → contesto → task →
  * instradamento all'agente → esecuzione → Report persistito e leggibile.
+ *
+ * Va eseguito con la coda in esclusiva: l'AppModule registra un worker
+ * BullMQ, quindi un backend di sviluppo acceso sullo stesso Redis
+ * consumerebbe i job di questo test col servizio agenti reale invece che
+ * col doppio, e le asserzioni sull'invocazione fallirebbero. Fermare
+ * `npm run start:dev` prima di lanciarlo; in CI il problema non si pone.
  */
 
 const REPO_URL = 'https://github.com/OWASP/NodeGoat';
