@@ -7,8 +7,69 @@ from typing import Any, List, Optional, Tuple
 
 from ..config import settings
 from ..github_toolset import GitHubToolset
-from ..models import Block, FindingBlock, PolicyViolationBlock, Proposal
+from ..models import (
+    SEVERITY_ORDER,
+    Block,
+    FindingBlock,
+    PolicyViolationBlock,
+    Proposal,
+)
 from ._base import extract_json, load_prompt_template, render_prompt
+
+
+def _normalizza_percorso(path: str) -> str:
+    """Riduce un percorso alla forma con cui viene confrontato.
+
+    Il modello riscrive volentieri lo stesso file come './src/a.js',
+    'src\\a.js' o con una barra iniziale: sono lo stesso file, e scartarli
+    come fuori ambito sarebbe un falso negativo.
+    """
+    return path.replace('\\', '/').lstrip('./').lstrip('/')
+
+
+def _only_in_scope(blocks: List[FindingBlock], ctx: Optional[dict]) -> List[FindingBlock]:
+    """Scarta i riscontri su file che non erano nell'ambito richiesto (RF.30).
+
+    Il modello riceve l'elenco dei file da esaminare, ma nulla gli impedisce
+    di segnalare vulnerabilita' su percorsi che non gli sono mai stati dati:
+    file esclusi dall'ambito, oppure inventati di sana pianta. Riportarli
+    significherebbe attribuire all'utente riscontri su codice che non ha
+    chiesto di analizzare e che l'agente non ha letto.
+
+    Senza 'scope_files' nel contesto -- un chiamante che passa un ctx vuoto --
+    non c'e' nulla con cui confrontare e i blocchi passano invariati.
+    """
+    scope = (ctx or {}).get('scope_files')
+    if not scope:
+        return blocks
+
+    ammessi = {_normalizza_percorso(p) for p in scope}
+    return [b for b in blocks if _normalizza_percorso(b.filePath) in ammessi]
+
+
+def _most_critical_first(blocks: List[FindingBlock]) -> List[FindingBlock]:
+    """Riordina i riscontri dal piu' al meno critico (RF.61).
+
+    L'ordinamento e' stabile: a parita' di gravita' resta l'ordine in cui il
+    modello li ha prodotti, che e' l'unico criterio secondario disponibile.
+    Una gravita' che non compare in SEVERITY_ORDER finisce in fondo invece
+    di far fallire l'ordinamento.
+    """
+    return sorted(
+        blocks,
+        key=lambda b: SEVERITY_ORDER.index(b.severity) if b.severity in SEVERITY_ORDER else -1,
+        reverse=True,
+    )
+
+
+def _renumbered(blocks: List[FindingBlock]) -> List[FindingBlock]:
+    """Rinumera 'order' dopo filtro e riordino.
+
+    'order' e' la posizione con cui il blocco viene reso a schermo: lasciarlo
+    al valore di arrivo dopo aver scartato o spostato dei riscontri
+    produrrebbe buchi e numerazioni incoerenti con l'ordine effettivo.
+    """
+    return [b.model_copy(update={'order': i}) for i, b in enumerate(blocks)]
 
 
 class ContextResourceMissingError(Exception):
@@ -113,7 +174,13 @@ class SecurityLoader:
 
         return {
             'policy': policy_content,
-            'files': tree_str
+            'files': tree_str,
+            # Lo stesso elenco di 'files', ma strutturato: 'files' e' pensato
+            # per il prompt, questo serve a parse_output per scartare i
+            # riscontri su percorsi che non erano nell'ambito richiesto
+            # (RF.30). Tenerne una sola copia significherebbe rifare il
+            # parsing di una stringa costruita per il modello.
+            'scope_files': files_to_scan,
         }
 
 
@@ -192,7 +259,10 @@ class OwaspScanProfile:
                     remediation=remediation
                 )
             )
-        return blocks, None
+
+        blocks = _only_in_scope(blocks, ctx)
+        blocks = _most_critical_first(blocks)
+        return _renumbered(blocks), None
 
 
 class SecurityPolicyProfile:
