@@ -20,6 +20,7 @@
     "test:e2e": "vitest --config ./test/vitest-e2e.config.mts"
   },
   "dependencies": {
+    "@codeguardian/shared": "workspace:*",
     "@nestjs-modules/ioredis": "^2.2.2",
     "@nestjs/bullmq": "^11.0.0",
     "@nestjs/common": "^11.0.0",

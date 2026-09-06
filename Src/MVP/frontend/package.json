@@ -24,6 +24,7 @@
     ]
   },
   "dependencies": {
+    "@codeguardian/shared": "workspace:*",
     "@tanstack/react-router": "^1.170.32",
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",

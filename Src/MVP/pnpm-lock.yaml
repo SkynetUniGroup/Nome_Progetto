@@ -26,6 +26,9 @@ importers:
 
   backend:
     dependencies:
+      '@codeguardian/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@nestjs-modules/ioredis':
         specifier: ^2.2.2
         version: 2.2.2(@nestjs/common@11.2.3(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.3)(@nestjs/mongoose@11.0.4(@nestjs/common@11.2.3(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.3)(mongoose@9.9.4)(rxjs@7.8.2))(ioredis@6.0.0(supports-color@8.1.1))(mongoose@9.9.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -153,6 +156,9 @@ importers:
 
   frontend:
     dependencies:
+      '@codeguardian/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@tanstack/react-router':
         specifier: ^1.170.32
         version: 1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -254,6 +260,8 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+
+  shared: {}
 
 packages:
 
