@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
+  FILE_SORGENTE,
   patSpendibile,
   vaiA,
   registraEAccedi,
@@ -21,6 +22,8 @@ import {
  * che l'abbia effettivamente aperta: è coperto in ts-agente-docs.spec.ts.
  */
 
+const LLM = process.env.E2E_LLM_ENABLED === '1';
+
 test.describe('TS_49–TS_64, TS_73–TS_74 · Report ed esportazione', () => {
   test.beforeAll(async ({ request }) => {
     test.skip(
@@ -38,7 +41,7 @@ test.describe('TS_49–TS_64, TS_73–TS_74 · Report ed esportazione', () => {
     await salvaCredenziale(request, token);
     const contextId = await creaContesto(request, token, {
       scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      paths: [FILE_SORGENTE],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -138,6 +141,8 @@ test.describe('TS_49–TS_64, TS_73–TS_74 · Report ed esportazione', () => {
     page,
     request,
   }) => {
+    // La durata e' valorizzata solo su un report completato.
+    test.skip(!LLM, "richiede E2E_LLM_ENABLED=1 e il servizio agenti attivo");
     await reportPronto(page, request);
     await vaiA(page, 'Report');
     await page.getByRole('link', { name: /Visualizza/ }).first().click();
@@ -229,6 +234,7 @@ test.describe('TS_49–TS_64, TS_73–TS_74 · Report ed esportazione', () => {
     page,
     request,
   }) => {
+    test.skip(!LLM, "l'export rifiuta i report falliti: serve un'analisi completata");
     await reportPronto(page, request);
     await vaiA(page, 'Report');
     await page.getByRole('link', { name: /Visualizza/ }).first().click();
@@ -244,6 +250,7 @@ test.describe('TS_49–TS_64, TS_73–TS_74 · Report ed esportazione', () => {
     page,
     request,
   }) => {
+    test.skip(!LLM, "l'export rifiuta i report falliti: serve un'analisi completata");
     const token = await reportPronto(page, request);
     const elenco = await request.get(`${API}/reports`, { headers: auth(token) });
     const [report] = await elenco.json();
@@ -268,6 +275,24 @@ test.describe('TS_49–TS_64, TS_73–TS_74 · Report ed esportazione', () => {
     await page.getByRole('button', { name: /Esporta PDF/ }).click();
 
     await expect(page.getByText(/Errore durante il download del PDF/)).toBeVisible();
+  });
+
+  test("TS_74b (RF.74) — l'esportazione di un report fallito viene rifiutata", async ({
+    page,
+    request,
+  }) => {
+    // Un report FAILED non ha contenuto da impaginare: il contratto prevede
+    // un 409 con corpo vuoto, non un PDF vuoto scaricato sul disco.
+    const token = await reportPronto(page, request);
+    const elenco = await request.get(`${API}/reports`, { headers: auth(token) });
+    const [report] = await elenco.json();
+
+    const risposta = await request.get(`${API}/reports/${report.id}/export?format=pdf`, {
+      headers: auth(token),
+    });
+
+    expect(risposta.status()).toBe(409);
+    expect(await risposta.text()).toBe('');
   });
 
   test('TS_53b (RF.53) — un report di un altro utente non è accessibile', async ({ request }) => {

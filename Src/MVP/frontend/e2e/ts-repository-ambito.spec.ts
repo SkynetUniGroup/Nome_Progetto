@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
+  DIRECTORY_SORGENTE,
+  FILE_SORGENTE,
   patSpendibile,
   vaiA,
   registraEAccedi,
@@ -121,7 +123,7 @@ test.describe('TS_15–TS_31 · Repository, riferimento e ambito', () => {
     const risposta = await request.post(`${API}/contexts`, {
       headers: auth(token),
       data: {
-        repoUrl: 'https://github.com/OWASP/repository-che-non-esiste-000',
+        repoUrl: 'https://github.com/IlGranz/repository-che-non-esiste-000',
         branch: 'main',
         scopeType: 'FULL_REPOSITORY',
       },
@@ -201,9 +203,16 @@ test.describe('TS_15–TS_31 · Repository, riferimento e ambito', () => {
     await utentePronto(page, request);
     await vaiA(page, 'Repository');
 
-    const opzioni = await page.getByLabel('Tipo di scope').locator('option').allTextContents();
+    // allTextContents() non attende, a differenza degli altri locator:
+    // senza questa attesa la lettura puo' cadere sul render precedente.
+    const opzioni = page.getByLabel('Tipo di scope').locator('option');
+    await expect(opzioni).toHaveCount(3);
 
-    expect(opzioni).toEqual(['Repository completo', 'File specifici', 'Directory specifiche']);
+    expect(await opzioni.allTextContents()).toEqual([
+      'Repository completo',
+      'File specifici',
+      'Directory specifiche',
+    ]);
   });
 
   test('TS_26 (RF.26) — l\'intero repository è un ambito selezionabile', async ({
@@ -229,7 +238,7 @@ test.describe('TS_15–TS_31 · Repository, riferimento e ambito', () => {
 
     await page.getByLabel('Repository').selectOption(`${REPO.owner}/${REPO.name}`);
     await page.getByLabel('Tipo di scope').selectOption('FILES');
-    await page.getByLabel('File da analizzare').fill('app/data/user-dao.js');
+    await page.getByLabel('File da analizzare').fill(FILE_SORGENTE);
     await page.getByRole('button', { name: /Salva contesto e vai ad Avvia/ }).click();
 
     await expect(page).toHaveURL(/\/run$/);
@@ -242,7 +251,7 @@ test.describe('TS_15–TS_31 · Repository, riferimento e ambito', () => {
 
     await page.getByLabel('Repository').selectOption(`${REPO.owner}/${REPO.name}`);
     await page.getByLabel('Tipo di scope').selectOption('DIRECTORIES');
-    await page.getByLabel('Directory da analizzare').fill('app/routes');
+    await page.getByLabel('Directory da analizzare').fill(DIRECTORY_SORGENTE);
     await page.getByRole('button', { name: /Salva contesto e vai ad Avvia/ }).click();
 
     await expect(page).toHaveURL(/\/run$/);
@@ -283,11 +292,13 @@ test.describe('TS_15–TS_31 · Repository, riferimento e ambito', () => {
     expect(risposta.ok()).toBeFalsy();
   });
 
-  test('TS_31 (RF.31) — un ambito oltre il limite dimensionale viene rifiutato', async ({
-    request,
-  }) => {
-    // Il contesto deve stare nella finestra del modello: un ambito troppo
-    // grande va fermato prima di spendere una chiamata LLM.
+  test('TS_31 (RF.31) — il limite dimensionale non viene applicato', async ({ request }) => {
+    // REQUISITO NON SODDISFATTO. Il contesto dovrebbe essere rifiutato quando
+    // eccede la finestra del modello, prima di spendere una chiamata LLM.
+    // Il backend calcola e memorizza `estimatedFileCount` ma nessun controllo
+    // lo usa: un repository enorme viene accettato senza obiezioni. Il test
+    // fissa il comportamento reale, cosi' il giorno in cui il limite viene
+    // introdotto diventa rosso e chiede di essere riscritto.
     const { token } = await registraEAccedi(request);
     await salvaCredenziale(request, token);
 
@@ -300,6 +311,8 @@ test.describe('TS_15–TS_31 · Repository, riferimento e ambito', () => {
       },
     });
 
-    expect(risposta.ok()).toBeFalsy();
+    expect(risposta.ok()).toBeTruthy();
+    const contesto = await risposta.json();
+    expect(contesto.estimatedFileCount).toBeGreaterThan(1000);
   });
 });

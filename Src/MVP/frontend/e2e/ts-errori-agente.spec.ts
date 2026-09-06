@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
+  REPO_SENZA_POLICY,
+  FILE_SORGENTE,
   patSpendibile,
   vaiA,
   registraEAccedi,
@@ -47,8 +49,10 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
     // basta puntare la scansione policy a un repository che non ne ha uno.
     const token = await utentePronto(page, request);
     const contextId = await creaContesto(request, token, {
-      scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      repoUrl: REPO_SENZA_POLICY.url,
+      branch: REPO_SENZA_POLICY.branch,
+      scopeType: 'DIRECTORIES',
+      paths: ['Src/MVP/frontend/e2e'],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -67,8 +71,10 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
   }) => {
     const token = await utentePronto(page, request);
     const contextId = await creaContesto(request, token, {
-      scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      repoUrl: REPO_SENZA_POLICY.url,
+      branch: REPO_SENZA_POLICY.branch,
+      scopeType: 'DIRECTORIES',
+      paths: ['Src/MVP/frontend/e2e'],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -88,8 +94,10 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
   }) => {
     const token = await utentePronto(page, request);
     const contextId = await creaContesto(request, token, {
-      scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      repoUrl: REPO_SENZA_POLICY.url,
+      branch: REPO_SENZA_POLICY.branch,
+      scopeType: 'DIRECTORIES',
+      paths: ['Src/MVP/frontend/e2e'],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -197,7 +205,6 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
     // la dashboard consuma.
     const token = await utentePronto(page, request);
     await creaContesto(request, token);
-    await vaiA(page, 'Task');
     await page.route('**/api/v1/tasks', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
@@ -213,7 +220,7 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
           })
         : route.continue(),
     );
-    await page.reload();
+    await vaiA(page, 'Task');
 
     await expect(page.getByText(/TIMEOUT/)).toBeVisible();
     await expect(page.getByText(/il modello non ha risposto/)).toBeVisible();
@@ -225,7 +232,6 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
   }) => {
     const token = await utentePronto(page, request);
     await creaContesto(request, token);
-    await vaiA(page, 'Task');
     await page.route('**/api/v1/tasks', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
@@ -241,7 +247,7 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
           })
         : route.continue(),
     );
-    await page.reload();
+    await vaiA(page, 'Task');
 
     await expect(page.getByText(/PARSING/)).toBeVisible();
   });
@@ -252,7 +258,6 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
   }) => {
     const token = await utentePronto(page, request);
     await creaContesto(request, token);
-    await vaiA(page, 'Task');
     await page.route('**/api/v1/tasks', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
@@ -272,7 +277,7 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
           })
         : route.continue(),
     );
-    await page.reload();
+    await vaiA(page, 'Task');
 
     await expect(page.getByText(/CONTEXT_TOO_LARGE/)).toBeVisible();
   });
@@ -283,7 +288,6 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
   }) => {
     const token = await utentePronto(page, request, 'DEVELOPER');
     await creaContesto(request, token);
-    await vaiA(page, 'Task');
     await page.route('**/api/v1/tasks', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
@@ -303,7 +307,7 @@ test.describe('TS_65–TS_72 · Errori durante l\'elaborazione', () => {
           })
         : route.continue(),
     );
-    await page.reload();
+    await vaiA(page, 'Task');
 
     await expect(page.getByText(/rifiutato la creazione della Pull Request/)).toBeVisible();
   });

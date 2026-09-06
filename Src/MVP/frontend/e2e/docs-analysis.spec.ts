@@ -25,7 +25,7 @@ test.describe('Flusso completo: Agente Docs — documentazione inline su reposit
     await page.getByPlaceholder('skynetunigroup').fill('OWASP');
     await page.getByPlaceholder('code_guardian').fill('NodeGoat');
     await page.getByPlaceholder('main').fill('master');
-    await page.getByPlaceholder('es. Src/').fill('app/routes');
+    await page.getByPlaceholder('es. Src/').fill(DIRECTORY_SORGENTE);
 
     await page.getByRole('button', { name: 'Carica operazioni disponibili' }).click();
     await page.getByRole('combobox').selectOption({ value: 'DOCS_INLINE' });

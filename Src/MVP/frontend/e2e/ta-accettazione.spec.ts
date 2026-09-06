@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
+  REPO_SENZA_POLICY,
+  FILE_SORGENTE,
   vaiA,
   registraEAccedi,
   accediDalModulo,
@@ -119,7 +121,7 @@ test.describe('Test di Accettazione', () => {
     await expect(page.getByText('Inserisci almeno un percorso')).toBeVisible();
 
     // 4. Percorso valido: il contesto viene creato e verificato sul remoto.
-    await page.getByLabel('File da analizzare').fill('app/data/user-dao.js');
+    await page.getByLabel('File da analizzare').fill(FILE_SORGENTE);
     await page.getByRole('button', { name: /Salva contesto e vai ad Avvia/ }).click();
     await expect(page).toHaveURL(/\/run$/);
     await expect(page.getByText(`${REPO.owner}/${REPO.name}`)).toBeVisible();
@@ -132,7 +134,7 @@ test.describe('Test di Accettazione', () => {
     test.skip(!GITHUB_PAT, 'richiede E2E_GITHUB_PAT');
     const { utente, token } = await registraEAccedi(request, nuovoUtente('SECURITY_AUDITOR'));
     await salvaCredenziale(request, token);
-    await creaContesto(request, token, { scopeType: 'FILES', paths: ['app/data/user-dao.js'] });
+    await creaContesto(request, token, { scopeType: 'FILES', paths: [FILE_SORGENTE] });
     await accediDalModulo(page, utente);
 
     // 1. Le operazioni del ruolo sono elencate con nome e categoria.
@@ -149,7 +151,8 @@ test.describe('Test di Accettazione', () => {
     // 3. Avvio: entrambe compaiono nel monitoraggio.
     await page.getByRole('button', { name: 'Avvia 2 operazioni' }).click();
     await expect(page).toHaveURL(/\/tasks$/);
-    await expect(page.getByRole('listitem')).toHaveCount(2);
+    // Ristretto al contenuto: anche le voci del menu laterale sono <li>.
+    await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(2);
   });
 
   test('TA_05 — monitoraggio in tempo reale e isolamento degli errori (RF.43, RF.46, RF.48)', async ({
@@ -161,7 +164,7 @@ test.describe('Test di Accettazione', () => {
     await salvaCredenziale(request, token);
     const contextId = await creaContesto(request, token, {
       scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      paths: [FILE_SORGENTE],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -214,7 +217,7 @@ test.describe('Test di Accettazione', () => {
     await salvaCredenziale(request, token);
     const contextId = await creaContesto(request, token, {
       scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      paths: [FILE_SORGENTE],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -241,7 +244,7 @@ test.describe('Test di Accettazione', () => {
     await salvaCredenziale(request, token);
     const contextId = await creaContesto(request, token, {
       scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      paths: [FILE_SORGENTE],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -268,8 +271,10 @@ test.describe('Test di Accettazione', () => {
     const { utente, token } = await registraEAccedi(request, nuovoUtente('SECURITY_AUDITOR'));
     await salvaCredenziale(request, token);
     const contextId = await creaContesto(request, token, {
-      scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      repoUrl: REPO_SENZA_POLICY.url,
+      branch: REPO_SENZA_POLICY.branch,
+      scopeType: 'DIRECTORIES',
+      paths: ['Src/MVP/frontend/e2e'],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -332,7 +337,7 @@ test.describe('Test di Accettazione', () => {
     await salvaCredenziale(request, token);
     const contextId = await creaContesto(request, token, {
       scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      paths: [FILE_SORGENTE],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),

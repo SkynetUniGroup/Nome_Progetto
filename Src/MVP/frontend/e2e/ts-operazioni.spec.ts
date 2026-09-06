@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
+  REPO,
   patSpendibile,
   vaiA,
   registraEAccedi,
@@ -25,12 +26,21 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
     );
   });
 
-  /** Utente autenticato, con credenziale salvata e contesto già creato. */
+  /**
+   * Utente autenticato con un contesto attivo nella pagina di avvio.
+   *
+   * Il contesto va creato *dalla UI*: lo store della selezione vive nella
+   * memoria del client, quindi una POST /contexts fatta a lato non lo
+   * popola e /run mostrerebbe "Nessun contesto configurato".
+   */
   async function prontoAdAvviare(page: any, request: any, ruolo: any = 'SECURITY_AUDITOR') {
     const { utente, token } = await registraEAccedi(request, nuovoUtente(ruolo));
     await salvaCredenziale(request, token);
-    await creaContesto(request, token);
     await accediDalModulo(page, utente);
+    await vaiA(page, 'Repository');
+    await page.getByLabel('Repository').selectOption(`${REPO.owner}/${REPO.name}`);
+    await page.getByRole('button', { name: /Salva contesto e vai ad Avvia/ }).click();
+    await expect(page).toHaveURL(/\/run$/);
     return token;
   }
 
@@ -56,7 +66,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       request,
     }) => {
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
 
       await expect(page.getByRole('button', { name: /Analisi Sicurezza OWASP/ })).toBeVisible();
       await expect(page.getByRole('button', { name: /Verifica Policy/ })).toBeVisible();
@@ -67,7 +76,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       request,
     }) => {
       await prontoAdAvviare(page, request, 'DEVELOPER');
-      await vaiA(page, 'Avvia');
 
       for (const nome of [
         'Documentazione README',
@@ -86,7 +94,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       // La categoria (DOCS, SECURITY, CHANGELOG) è la descrizione di
       // supporto che accompagna il nome dell'operazione.
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
 
       const carta = page.getByRole('button', { name: /Analisi Sicurezza OWASP/ });
       await expect(carta).toContainText('SECURITY');
@@ -97,7 +104,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       request,
     }) => {
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
 
       await expect(page.getByText('Contesto attivo')).toBeVisible();
       await expect(page.getByRole('button', { name: /Seleziona almeno un'operazione/ })).toBeVisible();
@@ -108,7 +114,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       request,
     }) => {
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
       const carta = page.getByRole('button', { name: /Analisi Sicurezza OWASP/ });
 
       await expect(carta).toHaveAttribute('aria-pressed', 'false');
@@ -123,7 +128,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       request,
     }) => {
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
 
       await page.getByRole('button', { name: /Analisi Sicurezza OWASP/ }).click();
       await page.getByRole('button', { name: /Verifica Policy/ }).click();
@@ -136,7 +140,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       request,
     }) => {
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
 
       const avvio = page.getByRole('button', { name: /Seleziona almeno un'operazione/ });
 
@@ -148,7 +151,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       request,
     }) => {
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
       await page.getByRole('button', { name: /Analisi Sicurezza OWASP/ }).click();
       await page.getByRole('button', { name: /Verifica Policy/ }).click();
 
@@ -186,7 +188,6 @@ test.describe('TS_32–TS_42 · Operazioni e avvio', () => {
       // Requisito non implementato: nessun comando di attivazione delle
       // email esiste nell'interfaccia. Il test lo fissa per iscritto.
       await prontoAdAvviare(page, request);
-      await vaiA(page, 'Avvia');
 
       await expect(page.getByText(/email/i)).toHaveCount(0);
     });

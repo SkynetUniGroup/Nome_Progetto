@@ -44,7 +44,7 @@ test.describe('Flusso completo: Agente Security — scansione OWASP su repositor
     await page.getByPlaceholder('code_guardian').fill('NodeGoat');
     const refInput = page.getByPlaceholder('main');
     await refInput.fill('master');
-    await page.getByPlaceholder('es. Src/').fill('app/routes');
+    await page.getByPlaceholder('es. Src/').fill(DIRECTORY_SORGENTE);
 
     await page.getByRole('button', { name: 'Carica operazioni disponibili' }).click();
     const operationSelect = page.getByRole('combobox');

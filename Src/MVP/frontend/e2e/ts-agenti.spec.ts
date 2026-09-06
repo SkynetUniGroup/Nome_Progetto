@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
+  FILE_SORGENTE,
   vaiA,
   registraEAccedi,
   accediDalModulo,
@@ -37,7 +38,7 @@ async function eseguiOperazione(
   await salvaCredenziale(request, token);
   const contextId = await creaContesto(request, token, {
     scopeType: 'FILES',
-    paths: ['app/data/user-dao.js'],
+    paths: [FILE_SORGENTE],
     ...contesto,
   });
   await request.post(`${API}/tasks`, {
@@ -204,7 +205,7 @@ test.describe('TS_82–TS_86 · Agente Docs', () => {
   }) => {
     await eseguiOperazione(page, request, 'DEVELOPER', 'DOCS_API', {
       scopeType: 'FILES',
-      paths: ['app/routes/session.js'],
+      paths: [FILE_SORGENTE],
     });
 
     await apriReport(page);

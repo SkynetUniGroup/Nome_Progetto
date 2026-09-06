@@ -17,10 +17,25 @@ export const GITHUB_PAT = process.env.E2E_GITHUB_PAT ?? '';
 
 /** Repository pubblico usato come bersaglio delle analisi. */
 export const REPO = {
-  url: 'https://github.com/OWASP/NodeGoat',
-  owner: 'OWASP',
-  name: 'NodeGoat',
-  branch: 'master',
+  url: 'https://github.com/IlGranz/codeguardian-e2e-fixture',
+  owner: 'IlGranz',
+  name: 'codeguardian-e2e-fixture',
+  branch: 'develop',
+};
+
+/** File sorgente presente nel fixture, usato come ambito ristretto. */
+export const FILE_SORGENTE = 'src/example.js';
+
+/** Directory presente nel fixture. */
+export const DIRECTORY_SORGENTE = 'src';
+
+/**
+ * Repository senza POLICY.md, per il caso in cui la scansione delle policy
+ * deve fermarsi: il fixture invece ce l'ha, e serve al caso positivo.
+ */
+export const REPO_SENZA_POLICY = {
+  url: 'https://github.com/SkynetUniGroup/Code_Guardian',
+  branch: 'main',
 };
 
 export interface Utente {

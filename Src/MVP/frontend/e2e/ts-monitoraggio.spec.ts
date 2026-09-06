@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
+  FILE_SORGENTE,
   patSpendibile,
   vaiA,
   registraEAccedi,
@@ -31,7 +32,7 @@ test.describe('TS_43–TS_48 · Dashboard di monitoraggio', () => {
     await salvaCredenziale(request, token);
     const contextId = await creaContesto(request, token, {
       scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      paths: [FILE_SORGENTE],
     });
     const risposta = await request.post(`${API}/tasks`, {
       headers: auth(token),
@@ -133,7 +134,7 @@ test.describe('TS_43–TS_48 · Dashboard di monitoraggio', () => {
     await salvaCredenziale(request, token);
     const buono = await creaContesto(request, token, {
       scopeType: 'FILES',
-      paths: ['app/data/user-dao.js'],
+      paths: [FILE_SORGENTE],
     });
     await request.post(`${API}/tasks`, {
       headers: auth(token),

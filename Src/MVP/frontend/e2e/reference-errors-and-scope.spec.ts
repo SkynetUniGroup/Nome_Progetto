@@ -28,7 +28,7 @@ test.describe('Riferimento e ambito', () => {
     await page.getByPlaceholder('skynetunigroup').fill('OWASP');
     await page.getByPlaceholder('code_guardian').fill('NodeGoat');
     await page.getByPlaceholder('main').fill('questo-ref-non-esiste-e2e-12345');
-    await page.getByPlaceholder('es. Src/').fill('app/routes');
+    await page.getByPlaceholder('es. Src/').fill(DIRECTORY_SORGENTE);
 
     await page.getByRole('button', { name: 'Carica operazioni disponibili' }).click();
     await page.getByRole('combobox').selectOption({ value: 'SECURITY_OWASP' });
