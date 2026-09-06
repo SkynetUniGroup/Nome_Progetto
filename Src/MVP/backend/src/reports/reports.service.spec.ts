@@ -118,6 +118,16 @@ describe('ReportsService', () => {
       await expect(
         service.findOneForUser('attacker', 'someone-elses-report'),
       ).rejects.toThrow(NotFoundException);
+
+      // Senza questa asserzione il test era un doppione del precedente: il
+      // mock risolve a null a prescindere dagli argomenti, quindi "il
+      // report è di un altro" non veniva mai messo in scena. È qui che si
+      // vede che l'identità di chi chiede entra nella query — e che non
+      // esiste un ramo che carichi il report e poi risponda 403.
+      expect(reportModel.findOne).toHaveBeenCalledWith({
+        _id: 'someone-elses-report',
+        userId: 'attacker',
+      });
     });
 
     it('returns the full ReportDto with pendingAction taken from the owning Task', async () => {

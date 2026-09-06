@@ -206,7 +206,36 @@ describe('TasksService', () => {
     });
   });
 
+  // Il filtro passato a Mongo è la sola cosa che tiene separate le Task di
+  // utenti diversi: i mock qui sotto risolvono senza guardare gli argomenti,
+  // quindi senza un'asserzione esplicita su di esso togliere `userId` dalla
+  // query non farebbe fallire niente — GET /tasks restituirebbe le task di
+  // tutti e GET /tasks/:id sarebbe leggibile da chiunque indovini un id.
+  describe('findAllForUser', () => {
+    it('queries only the caller own tasks, newest first', async () => {
+      const sort = jest.fn().mockResolvedValue([]);
+      taskModel.find.mockReturnValue({ sort });
+
+      await service.findAllForUser('user1');
+
+      expect(taskModel.find).toHaveBeenCalledWith({ userId: 'user1' });
+      expect(sort).toHaveBeenCalledWith({ createdAt: -1 });
+    });
+  });
+
   describe('findOneForUser', () => {
+    it('scopes the lookup by id and owner together', async () => {
+      taskModel.findOne.mockResolvedValue(null);
+
+      await expect(service.findOneForUser('user1', 'task1')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(taskModel.findOne).toHaveBeenCalledWith({
+        _id: 'task1',
+        userId: 'user1',
+      });
+    });
+
     it('throws NotFoundException when the task does not belong to the caller', async () => {
       taskModel.findOne.mockResolvedValue(null);
 
@@ -217,6 +246,18 @@ describe('TasksService', () => {
   });
 
   describe('cancel', () => {
+    it('scopes the initial lookup by id and owner together', async () => {
+      taskModel.findOne.mockResolvedValue(null);
+
+      await expect(service.cancel('user1', 'task1')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(taskModel.findOne).toHaveBeenCalledWith({
+        _id: 'task1',
+        userId: 'user1',
+      });
+    });
+
     it('throws NotFoundException when the task does not belong to the caller', async () => {
       taskModel.findOne.mockResolvedValue(null);
 
@@ -335,6 +376,14 @@ describe('TasksService', () => {
         sprintId: 'S-42',
       } as never);
 
+      // Il ramo SPRINT_ID scrive con task.save(), non con l'updateOne
+      // condizionato che porta userId nel filtro: qui l'unica difesa
+      // contro la scrittura sulla Task di un altro è la findOne iniziale,
+      // quindi il suo filtro va asserito.
+      expect(taskModel.findOne).toHaveBeenCalledWith({
+        _id: 'task1',
+        userId: 'user1',
+      });
       expect(task.sprintId).toBe('S-42');
       expect(task.pendingInput).toBeNull();
       expect(task.save).toHaveBeenCalled();

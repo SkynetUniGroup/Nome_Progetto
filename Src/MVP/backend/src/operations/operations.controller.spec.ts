@@ -25,9 +25,13 @@ describe('OperationsController', () => {
     controller = module.get<OperationsController>(OperationsController);
   });
 
-  it('offers the operations allowed to the caller role', () => {
-    // The role comes from the verified token, so a caller cannot widen its
-    // own list by asking for a different one.
+  // Qui si verifica l'inoltro del ruolo al registry e nient'altro: il
+  // metodo viene chiamato passando il ruolo come argomento, quindi il
+  // decoratore @CurrentUser('role') — che è ciò che davvero impedisce a un
+  // chiamante di allargarsi la lista chiedendo un ruolo diverso — resta
+  // fuori dal giro. Quella garanzia è coperta in
+  // ../common/decorators/current-user.decorator.spec.ts.
+  it('forwards the caller role to the registry and returns what it answers', () => {
     const result = controller.findAll('SECURITY_AUDITOR');
 
     expect(registry.getForRole).toHaveBeenCalledWith('SECURITY_AUDITOR');
@@ -40,11 +44,5 @@ describe('OperationsController', () => {
     controller.findAll('DEVELOPER');
 
     expect(registry.getForRole).toHaveBeenCalledWith('DEVELOPER');
-  });
-
-  it('returns an empty list rather than failing when a role has no operations', () => {
-    registry.getForRole.mockReturnValueOnce([]);
-
-    expect(controller.findAll('PROJECT_MANAGER')).toEqual([]);
   });
 });

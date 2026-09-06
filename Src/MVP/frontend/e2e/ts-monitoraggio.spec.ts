@@ -8,7 +8,6 @@ import {
   salvaCredenziale,
   creaContesto,
   nuovoUtente,
-  GITHUB_PAT,
   API,
   auth,
 } from './helpers';
@@ -17,6 +16,8 @@ import {
  * Test di Sistema TS_43 – TS_48 (RF.43 – RF.48): dashboard di monitoraggio
  * delle operazioni prese in carico dall'Orchestratore.
  */
+
+const LLM = process.env.E2E_LLM_ENABLED === '1';
 
 test.describe('TS_43–TS_48 · Dashboard di monitoraggio', () => {
   test.beforeAll(async ({ request }) => {
@@ -108,7 +109,12 @@ test.describe('TS_43–TS_48 · Dashboard di monitoraggio', () => {
     });
   });
 
-  test('TS_47 (RF.47) — il collegamento al report compare solo a operazione completata', async ({
+  // Le due metà di RF.47 sono test distinti perché hanno prerequisiti
+  // diversi: la metà negativa si verifica sempre, quella positiva richiede
+  // una task che arrivi davvero a "Completato" — cioè il modello. Tenerle
+  // insieme dietro un `if` faceva risultare "ok" un test di cui, senza
+  // modello, veniva eseguita solo la prima asserzione.
+  test('TS_47 (RF.47) — nessun collegamento al report prima del completamento', async ({
     page,
     request,
   }) => {
@@ -117,11 +123,18 @@ test.describe('TS_43–TS_48 · Dashboard di monitoraggio', () => {
 
     // Finché non è completata, nessun comando per le fasi successive.
     await expect(page.getByRole('link', { name: 'Vedi report' })).toHaveCount(0);
+  });
 
-    await expect(page.getByText(/Completato|Fallito/).first()).toBeVisible({ timeout: 180_000 });
-    if (await page.getByText('Completato').first().isVisible()) {
-      await expect(page.getByRole('link', { name: 'Vedi report' })).toBeVisible();
-    }
+  test('TS_47b (RF.47) — il collegamento al report compare a operazione completata', async ({
+    page,
+    request,
+  }) => {
+    test.skip(!LLM, 'richiede E2E_LLM_ENABLED=1: senza modello la task fallisce');
+    await avviaTask(page, request);
+    await vaiA(page, 'Task');
+
+    await expect(page.getByText('Completato').first()).toBeVisible({ timeout: 240_000 });
+    await expect(page.getByRole('link', { name: 'Vedi report' })).toBeVisible();
   });
 
   test('TS_48 (RF.48) — il fallimento di una task non compromette le altre', async ({

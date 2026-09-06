@@ -35,7 +35,11 @@ describe('UsageLimitService', () => {
       { upsert: boolean; new: boolean },
     ];
     expect(filter.userId).toBe('user1');
-    expect(filter.yearMonth).toMatch(/^\d{4}-\d{2}$/);
+    // Il mese vero, non la sua forma: con /^\d{4}-\d{2}$/ anche un
+    // currentYearMonth() bloccato su '1970-01' passava, e il contatore di
+    // RF.66 non si sarebbe più azzerato — il tetto mensile diventava un
+    // tetto a vita.
+    expect(filter.yearMonth).toBe(new Date().toISOString().slice(0, 7));
     expect(update).toEqual({ $inc: { count: 3 } });
     expect(options).toEqual({ upsert: true, new: true });
     expect(model.updateOne).not.toHaveBeenCalled();
@@ -60,7 +64,7 @@ describe('UsageLimitService', () => {
     expect(model.updateOne).toHaveBeenCalledWith(
       {
         userId: 'user1',
-        yearMonth: expect.stringMatching(/^\d{4}-\d{2}$/) as string,
+        yearMonth: new Date().toISOString().slice(0, 7),
       },
       { $inc: { count: -10 } },
     );

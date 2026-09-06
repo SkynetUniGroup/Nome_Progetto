@@ -54,9 +54,11 @@ describe('TextBlockRenderer', () => {
       <TextBlockRenderer block={{ kind: 'text', order: 1, markdown }} />,
     );
 
+    // Il testo, non il nome della classe CSS che lo impagina: asserire
+    // 'whitespace-pre-wrap' si rompeva a ogni ritocco estetico e passava
+    // comunque se gli a capo non fossero stati preservati.
     const pre = container.querySelector('pre')!;
     expect(pre.textContent).toBe(markdown);
-    expect(pre.className).toContain('whitespace-pre-wrap');
   });
 });
 

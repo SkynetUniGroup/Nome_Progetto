@@ -110,10 +110,21 @@ export async function salvaCredenziale(
  * rifiutato dal backend: senza questo controllo ogni test dipendente da
  * GitHub fallirebbe separatamente, nascondendo l'unica causa comune dietro
  * venti errori diversi.
+ *
+ * Distingue due situazioni che prima finivano entrambe in uno skip:
+ *
+ *  - `E2E_GITHUB_PAT` assente — l'esecuzione è volutamente parziale, i test
+ *    che dipendono da GitHub si dichiarano saltati: `false`.
+ *  - `E2E_GITHUB_PAT` valorizzato ma rifiutato — l'ambiente è rotto (token
+ *    scaduto o senza scope). Qui skippare è la risposta sbagliata: fa
+ *    sparire una settantina di test lasciando il codice di uscita a 0, cioè
+ *    un rendiconto verde che nessuno controlla. Solleva.
  */
 let patUtilizzabile: boolean | null = null;
+let patRifiutato: Error | null = null;
 
 export async function patSpendibile(request: APIRequestContext): Promise<boolean> {
+  if (patRifiutato !== null) throw patRifiutato;
   if (patUtilizzabile !== null) return patUtilizzabile;
   if (!GITHUB_PAT) {
     patUtilizzabile = false;
@@ -124,8 +135,17 @@ export async function patSpendibile(request: APIRequestContext): Promise<boolean
     headers: auth(token),
     data: { provider: 'GITHUB', token: GITHUB_PAT },
   });
-  patUtilizzabile = risposta.ok();
-  return patUtilizzabile;
+  if (!risposta.ok()) {
+    patRifiutato = new Error(
+      `PAT configurato ma rifiutato da GitHub: scaduto o senza scope "repo" ` +
+        `(il backend ha risposto ${risposta.status()}). ` +
+        'Genera un nuovo token con scope "repo" e ripassalo in E2E_GITHUB_PAT, ' +
+        'oppure togli la variabile per eseguire volutamente la suite ridotta.',
+    );
+    throw patRifiutato;
+  }
+  patUtilizzabile = true;
+  return true;
 }
 
 /** Crea un contesto di analisi e ne restituisce l'identificativo. */
@@ -181,7 +201,13 @@ export async function accediDalModulo(page: Page, utente: Utente) {
 }
 
 /** Voci della barra di navigazione dell'area autenticata. */
-export type Sezione = 'Credenziali' | 'Repository' | 'Avvia' | 'Task' | 'Report';
+export type Sezione =
+  | 'Credenziali'
+  | 'Repository'
+  | 'Avvia'
+  | 'Task'
+  | 'Report'
+  | 'Template';
 
 /**
  * Naviga verso una sezione usando la barra laterale.
