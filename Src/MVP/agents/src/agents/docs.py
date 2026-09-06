@@ -171,7 +171,14 @@ class DocsLoader:
                 'package_json': package_json,
                 'readme': readme,
                 'original_readme': readme,
-                'readme_path': readme_path
+                'readme_path': readme_path,
+                # RF.79: il template personalizzato dell'utente, se ne ha
+                # caricato uno. Arriva nel payload di avvio invece che da
+                # GitHub perche' appartiene all'utente, non al repository:
+                # lo stesso template vale per tutti i progetti che analizza.
+                # Assente significa "usa il modello di default" (RF.81), che
+                # e' esattamente cio' che build_prompt fa senza questo campo.
+                'readme_template': (agent_payload or {}).get('readmeTemplate'),
             }
 
         # Original path for DOCS_INLINE and DOCS_API
@@ -376,13 +383,21 @@ class DocsReadmeProfile:
         self._ctx = ctx
         template_data = load_prompt_template('docs', 'readme_docs')
 
-        template_path = Path(settings.prompts_dir) / 'docs' / 'default_readme_template.md'
-        readme_template = ''
-        if template_path.exists():
-            with open(template_path, 'r', encoding='utf-8') as f:
-                readme_template = f.read()
-        else:
-            readme_template = '# README\n\nNo default template found.'
+        # RF.79/RF.81: vince il template caricato dall'utente; senza, si
+        # ricade sul modello di default dell'agente. Il ripristino previsto
+        # da RF.81 non e' quindi un'operazione a se': togliere il template
+        # personalizzato riporta l'agente su questo ramo.
+        readme_template = (ctx.get('readme_template') or '').strip()
+
+        if not readme_template:
+            template_path = (
+                Path(settings.prompts_dir) / 'docs' / 'default_readme_template.md'
+            )
+            if template_path.exists():
+                with open(template_path, 'r', encoding='utf-8') as f:
+                    readme_template = f.read()
+            else:
+                readme_template = '# README\n\nNo default template found.'
 
         return render_prompt(
             template_data,

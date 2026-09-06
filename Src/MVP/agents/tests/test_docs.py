@@ -6,6 +6,8 @@ import pytest
 
 from src.agents.docs import DocsInlineProfile, DocsLoader, DocsReadmeProfile
 
+from conftest import FakeContextRef, FakeToolset
+
 
 PYTHON_SOURCE = '''
 def documentata(a, b):
@@ -283,6 +285,89 @@ def test_parse_output_keeps_warnings_alongside_a_proposal():
 
 
 # --- Profilo README ---------------------------------------------------------
+
+
+# RF.79 / RF.81 -- template README personalizzato.
+#
+# Il template appartiene all'utente, non al repository: arriva nel payload
+# di avvio (il backend ce lo mette leggendolo da TemplatesService) e non
+# viene letto da GitHub. Assente, l'agente ricade sul proprio modello di
+# default: e' cosi' che RF.81 realizza il "ripristino" senza un'operazione
+# dedicata.
+
+@pytest.mark.asyncio
+async def test_readme_loader_carries_the_user_template_into_the_context():
+    """Il template caricato dall'utente arriva fino al contesto dell'agente."""
+    toolset = FakeToolset(nodes=[{'type': 'file', 'path': 'README.md'}],
+                          files={'README.md': '# Attuale\n'})
+
+    ctx = await DocsLoader('DOCS_README').load(
+        FakeContextRef(), toolset, {'readmeTemplate': '# Il mio template\n'}
+    )
+
+    assert ctx['readme_template'] == '# Il mio template\n'
+
+
+@pytest.mark.asyncio
+async def test_readme_loader_leaves_the_template_empty_without_a_payload():
+    """Senza template caricato il campo resta vuoto: nessun valore inventato."""
+    toolset = FakeToolset(nodes=[{'type': 'file', 'path': 'README.md'}],
+                          files={'README.md': '# Attuale\n'})
+
+    ctx = await DocsLoader('DOCS_README').load(FakeContextRef(), toolset, {})
+
+    assert ctx['readme_template'] is None
+
+
+def test_readme_build_prompt_uses_the_user_template_when_present():
+    """Il template dell'utente finisce nel prompt al posto del default."""
+    profile = DocsReadmeProfile()
+
+    system_prompt, _ = profile.build_prompt({
+        'code_units': 'albero',
+        'readme': '# Attuale',
+        'readme_template': '# TEMPLATE PERSONALIZZATO\n\n## Sezione mia\n',
+    })
+
+    assert 'TEMPLATE PERSONALIZZATO' in system_prompt
+    assert 'Sezione mia' in system_prompt
+
+
+def test_readme_build_prompt_falls_back_to_the_default_template():
+    """Senza template personalizzato si usa il modello di default (RF.81)."""
+    profile = DocsReadmeProfile()
+
+    senza, _ = profile.build_prompt({
+        'code_units': 'albero',
+        'readme': '# Attuale',
+        'readme_template': None,
+    })
+    con, _ = profile.build_prompt({
+        'code_units': 'albero',
+        'readme': '# Attuale',
+        'readme_template': '# TEMPLATE PERSONALIZZATO\n',
+    })
+
+    assert 'TEMPLATE PERSONALIZZATO' not in senza
+    assert senza != con
+
+
+def test_readme_build_prompt_treats_a_blank_template_as_absent():
+    """Un template di soli spazi non deve svuotare il prompt: vale come assente."""
+    profile = DocsReadmeProfile()
+
+    vuoto, _ = profile.build_prompt({
+        'code_units': 'albero',
+        'readme': '# Attuale',
+        'readme_template': '   \n\t \n',
+    })
+    assente, _ = profile.build_prompt({
+        'code_units': 'albero',
+        'readme': '# Attuale',
+    })
+
+    assert vuoto == assente
+
 
 def test_readme_parse_output_diffs_against_the_existing_file():
     """Il README proposto viene confrontato con quello attuale."""

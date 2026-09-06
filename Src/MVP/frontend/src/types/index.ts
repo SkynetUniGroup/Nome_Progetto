@@ -360,3 +360,17 @@ export interface Report extends ReportSummary {
   body: ReportBlock[];
   proposal?: Proposal;
 }
+
+/**
+ * RF.79-RF.81 — stato del template README personalizzato dell'utente.
+ *
+ * `active: false` non è un errore ma il caso normale di chi non ne ha mai
+ * caricato uno e sta usando il modello di default dell'Agente Docs: è anche
+ * lo stato in cui si torna dopo una rimozione (RF.81).
+ */
+export interface ReadmeTemplateDto {
+  active: boolean;
+  filename: string | null;
+  content: string | null;
+  updatedAt: string | null;
+}

@@ -21,8 +21,8 @@ import {
  * questi percorrono flussi operativi completi dall'inizio alla fine, come
  * li eseguirebbe il Proponente durante il collaudo.
  *
- * TA_06 (template README personalizzato) e TA_11 (notifiche email) non sono
- * verificabili: nessuna delle due funzionalità esiste nel prodotto.
+ * TA_11 (notifiche email) non è verificabile: la funzionalità non esiste
+ * nel prodotto.
  */
 
 const LLM = process.env.E2E_LLM_ENABLED === '1';
@@ -184,6 +184,49 @@ test.describe('Test di Accettazione', () => {
     await expect(page.getByText(/Completato|Fallito|Annullato/)).toHaveCount(2, {
       timeout: 300_000,
     });
+  });
+
+  test('TA_06 — gestione del template README personalizzato (RF.79, RF.80, RF.81)', async ({
+    page,
+    request,
+  }) => {
+    // Non richiede né PAT né modello: il template è una risorsa personale
+    // dell'utente, indipendente dal repository e dall'esecuzione di un agente.
+    const { utente, token } = await registraEAccedi(request, nuovoUtente('DEVELOPER'));
+    await accediDalModulo(page, utente);
+    await vaiA(page, 'Template');
+
+    const campo = page.getByLabel(/Carica un template/);
+    const contenuto = '# {{project_name}}\n\n## Installazione\n\n## Licenza\n';
+
+    // 1. Si parte dal modello di default dell'Agente Docs.
+    await expect(page.getByText(/Nessun template personalizzato/)).toBeVisible();
+
+    // 2. RF.79 — caricamento di un Markdown valido.
+    await campo.setInputFiles({
+      name: 'template-aziendale.md',
+      mimeType: 'text/markdown',
+      buffer: Buffer.from(contenuto, 'utf8'),
+    });
+    await expect(page.getByRole('status')).toContainText('Template salvato');
+    await expect(page.getByText('template-aziendale.md')).toBeVisible();
+
+    // 3. RF.80 — un formato errato viene rifiutato con un messaggio, e non
+    //    sostituisce il template già valido.
+    await campo.setInputFiles({
+      name: 'template.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      buffer: Buffer.from(contenuto, 'utf8'),
+    });
+    await expect(page.getByRole('alert')).toContainText('.md');
+    await expect(page.getByText('template-aziendale.md')).toBeVisible();
+
+    // 4. RF.81 — la rimozione riporta al modello di default.
+    await page.getByRole('button', { name: /Rimuovi template/ }).click();
+    await expect(page.getByText(/Nessun template personalizzato/)).toBeVisible();
+
+    const finale = await request.get(`${API}/templates/readme`, { headers: auth(token) });
+    expect((await finale.json()).active).toBe(false);
   });
 
   test('TA_07 — README generato e proposto via Pull Request (RF.82, RF.63)', async ({

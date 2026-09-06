@@ -3,6 +3,7 @@ import { AgentRunPayload } from './agent-client.types';
 
 interface MockTask {
   id: string;
+  userId: string;
   operation: string;
   lgThreadId?: string;
   save: jest.Mock;
@@ -11,6 +12,7 @@ interface MockTask {
 function makeTask(overrides: Partial<MockTask> = {}): MockTask {
   return {
     id: 'task1',
+    userId: 'user1',
     operation: 'DOCS_README',
     lgThreadId: undefined,
     save: jest.fn().mockResolvedValue(undefined),
@@ -22,14 +24,19 @@ describe('AgentInvocationService', () => {
   let service: AgentInvocationService;
   let config: { get: jest.Mock };
   let agentRegistry: { getTimeoutS: jest.Mock };
+  let templates: { contentForUser: jest.Mock };
   let fetchMock: jest.Mock;
 
   beforeEach(() => {
     config = { get: jest.fn().mockReturnValue('http://agents:8000') };
     agentRegistry = { getTimeoutS: jest.fn().mockReturnValue(90) };
+    // RF.79: per difetto l'utente non ha un template personalizzato, che è
+    // il caso di gran lunga più comune; i test dedicati lo valorizzano.
+    templates = { contentForUser: jest.fn().mockResolvedValue(null) };
     service = new AgentInvocationService(
       config as never,
       agentRegistry as never,
+      templates as never,
     );
     fetchMock = jest.fn();
     global.fetch = fetchMock as never;
@@ -85,6 +92,46 @@ describe('AgentInvocationService', () => {
       taskId: 'task1',
       operationCode: 'DOCS_README',
       payload: {},
+    });
+  });
+
+  // RF.79 / RF.81: il template personalizzato dell'utente raggiunge
+  // l'agente, e la sua assenza è il ripristino del modello di default.
+  describe('template README personalizzato (RF.79, RF.81)', () => {
+    function payloadInviato(): Record<string, unknown> {
+      const [, options] = fetchMock.mock.calls[0] as [string, { body: string }];
+      return (JSON.parse(options.body) as { payload: Record<string, unknown> })
+        .payload;
+    }
+
+    it('attaches the caller own README template when they have one', async () => {
+      templates.contentForUser.mockResolvedValue('# Il mio template');
+      fetchMock.mockResolvedValue(completedResponse());
+
+      await service.invoke(makeTask() as never);
+
+      // Chiesto per l'utente proprietario della task, non per un altro.
+      expect(templates.contentForUser).toHaveBeenCalledWith('user1');
+      expect(payloadInviato()).toEqual({ readmeTemplate: '# Il mio template' });
+    });
+
+    it('sends no template at all when the user has none, so the agent falls back to its default', async () => {
+      templates.contentForUser.mockResolvedValue(null);
+      fetchMock.mockResolvedValue(completedResponse());
+
+      await service.invoke(makeTask() as never);
+
+      expect(payloadInviato()).toEqual({});
+    });
+
+    it('does not even look for a template for operations other than DOCS_README', async () => {
+      templates.contentForUser.mockResolvedValue('# Il mio template');
+      fetchMock.mockResolvedValue(completedResponse());
+
+      await service.invoke(makeTask({ operation: 'SECURITY_OWASP' }) as never);
+
+      expect(templates.contentForUser).not.toHaveBeenCalled();
+      expect(payloadInviato()).toEqual({});
     });
   });
 

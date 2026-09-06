@@ -15,6 +15,7 @@ import { runRoute } from './routes/_auth.run';
 import { tasksRoute } from './routes/_auth.tasks';
 import { reportsRoute } from './routes/_auth.reports';
 import { reportDetailRoute } from './routes/_auth.reports.$id';
+import { templateRoute } from './routes/_auth.template';
 
 /**
  * Authenticated children are nested under authRoute (the pathless layout route).
@@ -27,6 +28,7 @@ const authenticatedChildren = authRoute.addChildren([
   tasksRoute,
   reportsRoute,
   reportDetailRoute,
+  templateRoute,
 ]);
 
 export const routeTree = rootRoute.addChildren([

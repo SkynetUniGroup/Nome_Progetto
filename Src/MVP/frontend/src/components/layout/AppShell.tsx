@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { label: 'Avvia',       path: '/run' },
   { label: 'Task',        path: '/tasks' },
   { label: 'Report',      path: '/reports' },
+  { label: 'Template',    path: '/template' },
 ] as const;
 
 export function AppShell() {

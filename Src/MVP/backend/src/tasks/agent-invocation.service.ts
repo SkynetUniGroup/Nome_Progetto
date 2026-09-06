@@ -11,6 +11,7 @@ import {
   AgentStepResult,
 } from './agent-client.types';
 import { mapAgentErrorKind } from './agent-error-mapping';
+import { TemplatesService } from '../templates/templates.service';
 
 // A third outcome alongside the Task-terminal COMPLETED/FAILED: the agent
 // paused mid-run (or, for Changelog, was never started at all — see
@@ -32,6 +33,7 @@ export class AgentInvocationService {
   constructor(
     private readonly config: ConfigService,
     private readonly agentRegistry: AgentRegistry,
+    private readonly templates: TemplatesService,
   ) {}
 
   async invoke(task: TaskDocument): Promise<AgentInvocationResult> {
@@ -45,10 +47,25 @@ export class AgentInvocationService {
       taskId: task.id,
       threadId,
       operationCode: task.operation,
-      payload: {},
+      payload: await this.startPayload(task),
     };
 
     return this.call(task, '/internal/agent/start', body);
+  }
+
+  // RF.79: il template personalizzato dell'utente viaggia nel payload di
+  // avvio, che fino a qui era sempre vuoto. Interrogato solo per
+  // DOCS_README — è l'unica operazione che ne fa qualcosa, e le altre non
+  // devono pagare una lettura in più a ogni avvio. Senza template il campo
+  // resta assente e l'agente ricade sul proprio modello di default, che è
+  // esattamente il ripristino descritto da RF.81.
+  private async startPayload(task: TaskDocument): Promise<object> {
+    if (task.operation !== 'DOCS_README') {
+      return {};
+    }
+
+    const readmeTemplate = await this.templates.contentForUser(task.userId);
+    return readmeTemplate ? { readmeTemplate } : {};
   }
 
   // BE-17: called after POST /tasks/:id/input clears an INCOMPLETE_TASKS or

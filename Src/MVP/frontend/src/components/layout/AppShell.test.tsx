@@ -48,7 +48,7 @@ describe('AppShell', () => {
     expect(useWebSocketMock).toHaveBeenCalledTimes(1);
   });
 
-  it('espone le cinque voci di navigazione previste', () => {
+  it('espone le sei voci di navigazione previste', () => {
     autentica();
 
     render(<AppShell />);
@@ -57,12 +57,15 @@ describe('AppShell', () => {
     const voci = within(nav)
       .getAllByRole('link')
       .map((a) => [a.textContent, a.getAttribute('href')]);
+    // 'Template' (RF.79-RF.81) sta dopo 'Report': come le credenziali e' una
+    // risorsa personale dell'utente, non un passo del flusso di analisi.
     expect(voci).toEqual([
       ['Credenziali', '/credentials'],
       ['Repository', '/select'],
       ['Avvia', '/run'],
       ['Task', '/tasks'],
       ['Report', '/reports'],
+      ['Template', '/template'],
     ]);
   });
 
