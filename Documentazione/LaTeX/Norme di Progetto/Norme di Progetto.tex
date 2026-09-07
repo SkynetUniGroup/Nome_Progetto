@@ -869,14 +869,16 @@ I test di unità servono a verificare il corretto funzionamento delle parti più
 
 \paragraph{Framework}
 \begin{itemize}
-    \item \textit{TypeScript}: \textit{Vitest}. Configurazione in \texttt{vite.config.ts}.
-    \item \textit{Python}: \textit{pytest}. Configurazione in \texttt{pytest.ini}.
+    \item \textit{TypeScript} lato \textit{backend}: \textit{Jest}. Configurazione nella sezione \texttt{jest} di \texttt{Src/MVP/backend/package.json}. I file \texttt{.spec.ts} del \textit{backend} usano \texttt{jest.mock} e non girano sotto \textit{Vitest}.
+    \item \textit{TypeScript} lato \textit{frontend}: \textit{Vitest}. Configurazione in \texttt{Src/MVP/frontend/vitest.config.ts}.
+    \item \textit{Python}: \textit{pytest}. Configurazione in \texttt{Src/MVP/agents/pytest.ini}.
 \end{itemize}
 
 \paragraph{Copertura Minima}
 \begin{itemize}
-    \item 75\% globale.
-    \item Misurata con \textit{V8 (Vitest)} e \texttt{pytest-cov}.
+    \item 75\% globale, verificata automaticamente per gli \textit{agents} dall'opzione \texttt{--cov-fail-under=75} in \texttt{pytest.ini}.
+    \item Misurata con \textit{Istanbul} (\textit{Jest}, \textit{backend}), \textit{V8} (\textit{Vitest}, \textit{frontend}) e \texttt{pytest-cov} (\textit{agents}).
+    \item Valori rilevati il 2026-09-07: 88,63\% \textit{backend}, 99,71\% \textit{frontend}, 86,41\% \textit{agents}. Si veda il \textbf{Piano di Qualifica}, metrica MP\_12, per il dettaglio per componente.
 \end{itemize}
 
 \paragraph{Convenzioni}
@@ -904,13 +906,14 @@ I test di unità servono a verificare il corretto funzionamento delle parti più
 
 \paragraph{\textit{Mocking}}
 \begin{itemize}
-    \item \textit{TypeScript}: integrato in \textit{Vitest} (es. \texttt{vi.fn()}, \texttt{vi.mock()}).
+    \item \textit{TypeScript}: integrato nel rispettivo \textit{runner} --- \texttt{jest.fn()} e \texttt{jest.mock()} nel \textit{backend}, \texttt{vi.fn()} e \texttt{vi.mock()} nel \textit{frontend}.
     \item \textit{Python}: \texttt{unittest.mock}
 \end{itemize}
 
 \paragraph{Automazione}
 \begin{itemize}
-    \item Esecuzione con \texttt{pnpm test:unit} in \textit{CI/CD} tramite \textit{GitHub Actions} ad ogni \textit{push} (\textit{workflow} \texttt{deploy-staging.yml}) o \textit{Pull Request} (\textit{workflow} \texttt{pr-check.yml}) su \texttt{develop}.
+    \item Esecuzione con \texttt{pnpm test:unit} (che invoca \textit{Jest} sul \textit{backend} e \textit{Vitest} sul \textit{frontend}) e \texttt{python -m pytest} per gli \textit{agents}, in \textit{CI/CD} tramite \textit{GitHub Actions}: ad ogni \textit{push} su \texttt{develop} (\textit{workflow} \texttt{ci-staging.yml}), ad ogni \textit{Pull Request} verso \texttt{main} o \texttt{develop} (\textit{workflow} \texttt{pr-check.yml}) e in fase di rilascio (\textit{workflow} \texttt{release.yml}).
+    \item In tutti e tre i \textit{workflow} il passo \texttt{pnpm lint} precede quello dei test: un fallimento di analisi statica impedisce l'esecuzione delle suite a valle.
 \end{itemize}
 
 \newpage
@@ -918,12 +921,13 @@ I test di unità servono a verificare il corretto funzionamento delle parti più
 
 I test di integrazione verificano che le varie componenti del software, le tecnologie adottate e i servizi implementati comunichino, scambino dati e interagiscano correttamente. Servono quindi a testare funzionalità di livello più alto, che richiedono la collaborazione di più componenti distinti del software.
 
-\paragraph{Framework} \textit{Vitest} e \textit{pytest}.
+\paragraph{Framework} \textit{Jest} per il \textit{backend} (configurazione dedicata in \texttt{Src/MVP/backend/test/jest-e2e.json}) e \textit{pytest} per gli \textit{agents}.
 
 \paragraph{Ambiente}
 \begin{itemize}
-    \item \textit{Docker Compose} per servizi esterni (\textit{MongoDB}, \textit{API mock}).
-    \item Variabili d'ambiente: prefisso \texttt{TEST\_}.
+    \item \textit{Docker Compose} per i servizi esterni, tramite \texttt{docker-compose.test.yml}, che solleva \textit{MongoDB}, \textit{Redis} e \textit{MinIO}.
+    \item Variabili d'ambiente valorizzate esplicitamente per l'esecuzione (\texttt{MONGODB\_URI}, \texttt{REDIS\_URL}, \texttt{CORS\_ORIGIN}), su un \textit{database} distinto da quello di sviluppo.
+    \item I test di integrazione del \textit{backend} registrano un \textit{worker BullMQ}: vanno eseguiti con la coda in esclusiva, perché un \textit{backend} di sviluppo attivo sullo stesso \textit{Redis} ne consumerebbe i \textit{job}.
 \end{itemize}
 
 \paragraph{Casi di test}
@@ -935,14 +939,14 @@ I test di integrazione verificano che le varie componenti del software, le tecno
 
 \paragraph{Dati di Test}
 \begin{itemize}
-    \item \textit{Fixture}: file in \texttt{tests/fixtures/}.
-    \item Pulizia: reset DB tra test (es. \texttt{pytest-mongodb} \textit{fixture}).
+    \item \textit{Fixture}: definite nei file di test stessi; non è prevista una cartella \texttt{fixtures/} separata.
+    \item Pulizia: il \textit{database} di test è distinto da quello di sviluppo e viene rimosso alla chiusura dell'ambiente (\texttt{docker compose down -v}).
 \end{itemize}
 
 \paragraph{Esecuzione}
 \begin{itemize}
-    \item Locale: \texttt{pnpm test:integration}
-    \item \textit{CI}: Esecuzione in \textit{CI/CD} con \textit{GitHub Actions} come parte dei \textit{workflow} \texttt{pr-check.yml} (\textit{Pull Request}) e \texttt{deploy-staging.yml} (\textit{push} su \texttt{develop}), insieme ai test unitari.
+    \item Locale: \texttt{pnpm test:integration}, che solleva l'ambiente, esegue la suite \texttt{jest-e2e} e lo smonta.
+    \item \textit{CI}: Esecuzione in \textit{CI/CD} con \textit{GitHub Actions} come parte dei \textit{workflow} \texttt{pr-check.yml} (\textit{Pull Request} verso \texttt{main} o \texttt{develop}), \texttt{ci-staging.yml} (\textit{push} su \texttt{develop}) e \texttt{release.yml} (rilascio), insieme ai test unitari.
 \end{itemize}
 
 \newpage
